@@ -1,10 +1,11 @@
-// ParentPrep — tap a trip, pack, done.
-// Storage model: { [templateId]: { items: [{text, checked}] } }
+// ParentPrep — categorized packing lists with localStorage persistence.
+// Storage model: { [templateId]: { categories: [{ name, items: [{text, checked}] }] } }
 
-const STORAGE_KEY = "parentprep.v2";
+const STORAGE_KEY = "parentprep.v3";
+const CUSTOM_CATEGORY = "My additions";
 
 const state = {
-  lists: {},            // trip data keyed by template id
+  lists: {},
   activeTemplateId: null,
 };
 
@@ -31,15 +32,38 @@ function getList(id) {
   return state.lists[id];
 }
 
+function freshListFromTemplate(tpl) {
+  return {
+    categories: tpl.categories.map(cat => ({
+      name: cat.name,
+      items: cat.items.map(text => ({ text, checked: false })),
+    })),
+  };
+}
+
 function ensureList(id) {
   if (!state.lists[id]) {
-    const tpl = getTemplate(id);
-    state.lists[id] = {
-      items: tpl.items.map(text => ({ text, checked: false })),
-    };
+    state.lists[id] = freshListFromTemplate(getTemplate(id));
     save();
   }
   return state.lists[id];
+}
+
+function getCounts(list) {
+  let total = 0, done = 0;
+  list.categories.forEach(cat => {
+    cat.items.forEach(item => {
+      total++;
+      if (item.checked) done++;
+    });
+  });
+  return { total, done };
+}
+
+function forEachItem(list, fn) {
+  list.categories.forEach((cat, ci) => {
+    cat.items.forEach((item, ii) => fn(item, ci, ii));
+  });
 }
 
 // --- Navigation ----------------------------------------------------
@@ -71,7 +95,7 @@ function showList(templateId) {
   listScreen.classList.remove("hidden");
   backBtn.classList.remove("hidden");
   menuBtn.classList.remove("hidden");
-  headerTitle.textContent = `${tpl.emoji} ${tpl.age} · ${tpl.name}`;
+  headerTitle.textContent = `${tpl.emoji} ${tpl.name}`;
   document.body.classList.add("on-list");
   document.body.classList.remove("on-home");
   renderList();
@@ -80,78 +104,69 @@ function showList(templateId) {
 
 backBtn.addEventListener("click", showHome);
 
-// --- Home: grouped scenario cards ----------------------------------
+// --- Home: scenario cards ------------------------------------------
 
 const scenarioContainer = document.getElementById("scenarioContainer");
 
 function renderHome() {
   scenarioContainer.innerHTML = "";
 
-  // Group templates by age
-  const groups = {};
+  const grid = document.createElement("ul");
+  grid.className = "scenario-grid";
+
   window.TEMPLATES.forEach(tpl => {
-    if (!groups[tpl.age]) groups[tpl.age] = [];
-    groups[tpl.age].push(tpl);
-  });
+    const list = getList(tpl.id);
+    let total, done;
+    if (list) {
+      ({ total, done } = getCounts(list));
+    } else {
+      total = tpl.categories.reduce((n, c) => n + c.items.length, 0);
+      done = 0;
+    }
 
-  Object.entries(groups).forEach(([age, templates]) => {
-    const heading = document.createElement("h2");
-    heading.className = "section-title";
-    heading.textContent = age;
-    scenarioContainer.appendChild(heading);
+    let progressText, progressClass;
+    if (!list) {
+      progressText = "Tap to start";
+      progressClass = "not-started";
+    } else if (done === 0) {
+      progressText = "Ready to pack";
+      progressClass = "ready";
+    } else if (done === total) {
+      progressText = "All packed ✓";
+      progressClass = "done";
+    } else {
+      progressText = `${done} of ${total} packed`;
+      progressClass = "in-progress";
+    }
 
-    const grid = document.createElement("ul");
-    grid.className = "scenario-grid";
-
-    templates.forEach(tpl => {
-      const list = getList(tpl.id);
-      const total = list ? list.items.length : tpl.items.length;
-      const done = list ? list.items.filter(i => i.checked).length : 0;
-
-      let progressText, progressClass;
-      if (!list) {
-        progressText = "Tap to start";
-        progressClass = "not-started";
-      } else if (done === 0) {
-        progressText = "Ready to pack";
-        progressClass = "ready";
-      } else if (done === total) {
-        progressText = "All packed ✓";
-        progressClass = "done";
-      } else {
-        progressText = `${done} of ${total} packed`;
-        progressClass = "in-progress";
+    const pct = total ? (done / total) * 100 : 0;
+    const card = document.createElement("li");
+    card.className = "scenario-card";
+    card.setAttribute("tabindex", "0");
+    card.setAttribute("role", "button");
+    card.innerHTML = `
+      <div class="scenario-icon" aria-hidden="true">${tpl.emoji}</div>
+      <div class="scenario-body">
+        <div class="scenario-title">${escapeHTML(tpl.name)}</div>
+        <div class="scenario-sub">${escapeHTML(tpl.description)}</div>
+        <div class="scenario-progress ${progressClass}">${progressText}</div>
+      </div>
+      <div class="scenario-arrow" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+      </div>
+      <div class="scenario-card-progress" style="width:${pct}%"></div>
+    `;
+    card.addEventListener("click", () => showList(tpl.id));
+    card.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        showList(tpl.id);
       }
-
-      const pct = total ? (done / total) * 100 : 0;
-      const card = document.createElement("li");
-      card.className = "scenario-card";
-      card.setAttribute("tabindex", "0");
-      card.setAttribute("role", "button");
-      card.innerHTML = `
-        <div class="scenario-icon" aria-hidden="true">${tpl.emoji}</div>
-        <div class="scenario-body">
-          <div class="scenario-title">${escapeHTML(tpl.name)}</div>
-          <div class="scenario-sub">${escapeHTML(tpl.description)}</div>
-          <div class="scenario-progress ${progressClass}">${progressText}</div>
-        </div>
-        <div class="scenario-arrow" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
-        </div>
-        <div class="scenario-card-progress" style="width:${pct}%"></div>
-      `;
-      card.addEventListener("click", () => showList(tpl.id));
-      card.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          showList(tpl.id);
-        }
-      });
-      grid.appendChild(card);
     });
-
-    scenarioContainer.appendChild(grid);
+    grid.appendChild(card);
   });
+
+  scenarioContainer.appendChild(grid);
 }
 
 // --- List detail rendering -----------------------------------------
@@ -166,47 +181,71 @@ function renderList() {
 
   itemListEl.innerHTML = "";
 
-  if (list.items.length === 0) {
-    const empty = document.createElement("li");
+  const anyItems = list.categories.some(c => c.items.length > 0);
+
+  if (!anyItems) {
+    const empty = document.createElement("div");
     empty.className = "empty-state";
     empty.textContent = "No items. Add one below or reset to defaults from the menu.";
     itemListEl.appendChild(empty);
   } else {
-    list.items.forEach((item, idx) => {
-      const li = document.createElement("li");
-      li.className = "item" + (item.checked ? " checked" : "");
-      li.innerHTML = `
-        <div class="item-checkbox" role="checkbox" aria-checked="${item.checked}" tabindex="0"></div>
-        <div class="item-label">${escapeHTML(item.text)}</div>
-        <button class="item-delete" aria-label="Delete item">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-        </button>
-      `;
-      const checkbox = li.querySelector(".item-checkbox");
-      const label = li.querySelector(".item-label");
-      const delBtn = li.querySelector(".item-delete");
+    list.categories.forEach((cat, catIdx) => {
+      if (cat.items.length === 0) return;
 
-      const toggle = () => {
-        list.items[idx].checked = !list.items[idx].checked;
-        save();
-        renderList();
-      };
-      checkbox.addEventListener("click", toggle);
-      label.addEventListener("click", toggle);
+      const section = document.createElement("section");
+      section.className = "item-category";
+      if (cat.name === CUSTOM_CATEGORY) section.classList.add("is-custom");
 
-      delBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        list.items.splice(idx, 1);
-        save();
-        renderList();
+      const header = document.createElement("h3");
+      header.className = "category-header";
+      header.textContent = cat.name;
+      section.appendChild(header);
+
+      const ul = document.createElement("ul");
+      ul.className = "category-items";
+
+      cat.items.forEach((item, itemIdx) => {
+        const li = document.createElement("li");
+        li.className = "item" + (item.checked ? " checked" : "");
+        li.innerHTML = `
+          <div class="item-checkbox" role="checkbox" aria-checked="${item.checked}" tabindex="0"></div>
+          <div class="item-label">${escapeHTML(item.text)}</div>
+          <button class="item-delete" aria-label="Delete item">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        `;
+        const checkbox = li.querySelector(".item-checkbox");
+        const label = li.querySelector(".item-label");
+        const delBtn = li.querySelector(".item-delete");
+
+        const toggle = () => {
+          list.categories[catIdx].items[itemIdx].checked =
+            !list.categories[catIdx].items[itemIdx].checked;
+          save();
+          renderList();
+        };
+        checkbox.addEventListener("click", toggle);
+        label.addEventListener("click", toggle);
+        checkbox.addEventListener("keydown", (e) => {
+          if (e.key === " " || e.key === "Enter") { e.preventDefault(); toggle(); }
+        });
+
+        delBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          list.categories[catIdx].items.splice(itemIdx, 1);
+          save();
+          renderList();
+        });
+
+        ul.appendChild(li);
       });
 
-      itemListEl.appendChild(li);
+      section.appendChild(ul);
+      itemListEl.appendChild(section);
     });
   }
 
-  const total = list.items.length;
-  const done = list.items.filter(i => i.checked).length;
+  const { total, done } = getCounts(list);
   progressFill.style.width = total ? `${(done / total) * 100}%` : "0%";
   if (!total) {
     progressText.textContent = "Empty list";
@@ -228,7 +267,13 @@ addItemForm.addEventListener("submit", (e) => {
   if (!list) return;
   const text = newItemInput.value.trim();
   if (!text) return;
-  list.items.push({ text, checked: false });
+
+  let customCat = list.categories.find(c => c.name === CUSTOM_CATEGORY);
+  if (!customCat) {
+    customCat = { name: CUSTOM_CATEGORY, items: [] };
+    list.categories.push(customCat);
+  }
+  customCat.items.push({ text, checked: false });
   save();
   newItemInput.value = "";
   renderList();
@@ -250,7 +295,7 @@ listMenuModal.addEventListener("click", (e) => {
 uncheckAllBtn.addEventListener("click", () => {
   const list = getList(state.activeTemplateId);
   if (!list) return;
-  list.items.forEach(i => (i.checked = false));
+  forEachItem(list, (item) => { item.checked = false; });
   save();
   renderList();
   listMenuModal.classList.add("hidden");
@@ -259,9 +304,7 @@ uncheckAllBtn.addEventListener("click", () => {
 resetBtn.addEventListener("click", () => {
   if (!confirm("Reset this list to the default items? Anything you've added or removed will be lost.")) return;
   const tpl = getTemplate(state.activeTemplateId);
-  state.lists[state.activeTemplateId] = {
-    items: tpl.items.map(text => ({ text, checked: false })),
-  };
+  state.lists[state.activeTemplateId] = freshListFromTemplate(tpl);
   save();
   renderList();
   listMenuModal.classList.add("hidden");

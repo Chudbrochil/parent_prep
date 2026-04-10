@@ -1,5 +1,5 @@
 // ParentPrep service worker — minimal offline cache.
-const CACHE = "parentprep-v3";
+const CACHE = "parentprep-v4";
 const FILES = [
   "./",
   "./index.html",
