@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#4f7c5f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ParentPrep">
+<meta name="description" content="Pack smarter. Curated packing lists for trips with baby.">
+
+<!-- Open Graph (nice previews when shared in messaging apps) -->
+<meta property="og:title" content="ParentPrep">
+<meta property="og:description" content="Pack smarter. Curated packing lists for trips with baby.">
+<meta property="og:image" content="icon-512.png">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="ParentPrep">
+<meta name="twitter:description" content="Pack smarter. Curated packing lists for trips with baby.">
+
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+
+<!-- Manrope from Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<title>ParentPrep — Packing Lists for Parents</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body class="on-home">
+
+<header class="app-header">
+  <button id="backBtn" class="icon-btn hidden" aria-label="Back">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+  </button>
+  <div class="brand">
+    <span class="brand-icon" aria-hidden="true">🧳</span>
+    <h1 id="headerTitle" class="brand-name">ParentPrep</h1>
+  </div>
+  <button id="menuBtn" class="icon-btn hidden" aria-label="Menu">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+  </button>
+</header>
+
+<main id="app">
+
+  <!-- HOME -->
+  <section id="homeScreen" class="screen">
+    <div class="hero">
+      <h2 class="hero-title">What are you packing for?</h2>
+      <p class="hero-sub">Tap a trip. Check things off. Everything saves automatically on your phone.</p>
+    </div>
+    <div id="scenarioContainer"></div>
+  </section>
+
+  <!-- LIST DETAIL -->
+  <section id="listScreen" class="screen hidden">
+    <div class="list-header">
+      <div class="progress-bar">
+        <div id="progressFill" class="progress-fill"></div>
+      </div>
+      <p id="progressText" class="progress-text">0 of 0 packed</p>
+    </div>
+
+    <ul id="itemList" class="item-list"></ul>
+
+    <div class="add-item-wrap">
+      <form id="addItemForm" class="add-item-form">
+        <input id="newItemInput" type="text" placeholder="Add an item…" autocomplete="off" required>
+        <button type="submit" aria-label="Add item">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </form>
+    </div>
+  </section>
+
+</main>
+
+<!-- List menu -->
+<div id="listMenuModal" class="modal hidden">
+  <div class="modal-content">
+    <h2>List options</h2>
+    <button id="uncheckAllBtn" class="menu-btn">
+      <span class="menu-title">Start new trip</span>
+      <span class="menu-sub">Uncheck everything, keep your additions</span>
+    </button>
+    <button id="resetBtn" class="menu-btn">
+      <span class="menu-title">Reset to defaults</span>
+      <span class="menu-sub">Restore original items, discard changes</span>
+    </button>
+    <button id="closeMenuBtn" class="secondary-btn">Close</button>
+  </div>
+</div>
+
+<script src="templates.js"></script>
+<script src="app.js"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    });
+  }
+</script>
+</body>
+</html>
