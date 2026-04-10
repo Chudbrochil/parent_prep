@@ -1,4 +1,5 @@
-// ParentPrep — three packing lists, each grouped into categories.
+// ParentPrep — four trip templates, each grouped into categories.
+// Users can also create their own custom lists in the app.
 // Edit freely — this is the file to refine with your parenting group.
 window.TEMPLATES = [
 
@@ -6,42 +7,29 @@ window.TEMPLATES = [
     id: "short-trip",
     name: "Short trip",
     emoji: "🚗",
-    description: "A few hours out — store, park, small road trip",
+    description: "A diaper bag for the store, park, or quick errand",
     categories: [
       {
         name: "Clothes",
         items: [
-          "Spare outfit",
-          "Spare swaddle / muslin",
-          "Weather-appropriate hat",
-          "Weather layers",
+          "1 spare outfit",
           "Bib",
-        ],
-      },
-      {
-        name: "Sleeping",
-        items: [
-          "Pacifier",
-          "Small soft toy / rattle",
         ],
       },
       {
         name: "Eating",
         items: [
-          "Bottle(s) with formula OR nursing setup",
-          "Sippy cup with water (6mo+)",
-          "Burp cloths (2)",
-          "Snack / food pouch (6mo+)",
+          "Bottle + formula OR nursing cover (if feeding time)",
+          "2 burp cloths",
         ],
       },
       {
         name: "Diapers",
         items: [
-          "Diapers (3-5)",
+          "2-3 diapers",
           "Wipes pack",
           "Travel changing pad",
-          "Diaper rash cream",
-          "Disposable bags for dirty diapers",
+          "Disposable bags",
         ],
       },
       {
@@ -54,8 +42,73 @@ window.TEMPLATES = [
       {
         name: "Other",
         items: [
+          "Pacifier",
           "Hand sanitizer",
-          "Sunhat + sunscreen (6mo+)",
+          "Hat (if sunny)",
+        ],
+      },
+    ],
+  },
+
+  {
+    id: "short-overnight",
+    name: "Short overnight",
+    emoji: "🎒",
+    description: "A weekend nearby — 1 to 2 nights, short drive",
+    categories: [
+      {
+        name: "Clothes",
+        items: [
+          "2-3 outfits",
+          "Pajamas",
+          "Weather layers + hat",
+          "Bibs (2)",
+        ],
+      },
+      {
+        name: "Sleeping",
+        items: [
+          "Sleep sack",
+          "Pacifier",
+          "Comfort toy / lovey",
+          "Portable white noise (optional)",
+          "Night light (optional)",
+        ],
+      },
+      {
+        name: "Eating",
+        items: [
+          "Bottles (enough for all feedings)",
+          "Formula pre-measured",
+          "Nursing cover / pads (if breastfeeding)",
+          "Burp cloths (3-4)",
+        ],
+      },
+      {
+        name: "Diapers",
+        items: [
+          "Diapers (8-10)",
+          "Wipes pack + travel pack",
+          "Travel changing pad",
+          "Diaper rash cream",
+          "Disposable bags",
+        ],
+      },
+      {
+        name: "Transport",
+        items: [
+          "Car seat",
+          "Stroller",
+          "Baby carrier",
+        ],
+      },
+      {
+        name: "Other",
+        items: [
+          "Baby Tylenol (ask pediatrician)",
+          "Thermometer",
+          "Toiletries if needed",
+          "Health insurance card",
         ],
       },
     ],
@@ -138,7 +191,7 @@ window.TEMPLATES = [
     id: "ruths-list",
     name: "Ruth's list",
     emoji: "🏡",
-    description: "Overnight stays and extended visits",
+    description: "Extended stay — bringing the full setup",
     categories: [
       {
         name: "Clothes",

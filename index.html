@@ -91,7 +91,41 @@
       <span class="menu-title">Reset to defaults</span>
       <span class="menu-sub">Restore original items, discard changes</span>
     </button>
+    <button id="renameBtn" class="menu-btn hidden">
+      <span class="menu-title">Rename list</span>
+      <span class="menu-sub">Change this list's name</span>
+    </button>
+    <button id="deleteBtn" class="menu-btn danger hidden">
+      <span class="menu-title">Delete list</span>
+      <span class="menu-sub">Permanently remove this list</span>
+    </button>
     <button id="closeMenuBtn" class="secondary-btn">Close</button>
+  </div>
+</div>
+
+<!-- New list modal -->
+<div id="newListModal" class="modal hidden">
+  <div class="modal-content">
+    <h2>Create a new list</h2>
+    <form id="newListForm">
+      <label class="modal-label" for="newListName">List name</label>
+      <input id="newListName" type="text" placeholder="e.g. Camping trip" required maxlength="40" autocomplete="off">
+      <label class="modal-label">Pick an icon</label>
+      <div class="emoji-picker" id="emojiPicker">
+        <button type="button" class="emoji-option selected" data-emoji="📋">📋</button>
+        <button type="button" class="emoji-option" data-emoji="🎒">🎒</button>
+        <button type="button" class="emoji-option" data-emoji="🏕️">🏕️</button>
+        <button type="button" class="emoji-option" data-emoji="🏖️">🏖️</button>
+        <button type="button" class="emoji-option" data-emoji="⛷️">⛷️</button>
+        <button type="button" class="emoji-option" data-emoji="🚙">🚙</button>
+        <button type="button" class="emoji-option" data-emoji="🍼">🍼</button>
+        <button type="button" class="emoji-option" data-emoji="👶">👶</button>
+      </div>
+      <div class="modal-buttons">
+        <button type="button" id="cancelNewList" class="secondary-btn">Cancel</button>
+        <button type="submit" class="primary-btn">Create list</button>
+      </div>
+    </form>
   </div>
 </div>
 
