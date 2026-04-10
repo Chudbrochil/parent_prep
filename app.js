@@ -1,7 +1,7 @@
 // ParentPrep — categorized packing lists with localStorage persistence.
 // Storage model: { [templateId]: { categories: [{ name, items: [{text, checked}] }] } }
 
-const STORAGE_KEY = "parentprep.v3";
+const STORAGE_KEY = "parentprep.v4";
 const CUSTOM_CATEGORY = "My additions";
 
 const state = {
