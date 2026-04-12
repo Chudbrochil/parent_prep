@@ -254,11 +254,12 @@
   const renameBtn = document.getElementById("renameBtn");
   const deleteBtn = document.getElementById("deleteBtn");
   const closeMenuBtn = document.getElementById("closeMenuBtn");
-  const newListModal = document.getElementById("newListModal");
-  const newListForm = document.getElementById("newListForm");
-  const newListNameInput = document.getElementById("newListName");
-  const cancelNewListBtn = document.getElementById("cancelNewList");
-  const emojiPicker = document.getElementById("emojiPicker");
+  const wizardScreen = document.getElementById("wizardScreen");
+  const wizardProgress = document.getElementById("wizardProgress");
+  const wizardQuestion = document.getElementById("wizardQuestion");
+  const wizardOptions = document.getElementById("wizardOptions");
+  const wizardBackBtn = document.getElementById("wizardBackBtn");
+  const wizardCloseBtn = document.getElementById("wizardCloseBtn");
   const renameModal = document.getElementById("renameModal");
   const renameForm = document.getElementById("renameForm");
   const renameInput = document.getElementById("renameInput");
@@ -270,7 +271,6 @@
   const confirmOkBtn = document.getElementById("confirmOkBtn");
 
   if (newItemInput) newItemInput.setAttribute("maxlength", String(MAX_ITEM_TEXT_LENGTH));
-  if (newListNameInput) newListNameInput.setAttribute("maxlength", String(MAX_LIST_NAME_LENGTH));
   if (renameInput) renameInput.setAttribute("maxlength", String(MAX_LIST_NAME_LENGTH));
 
   // --- Reusable modal helpers ----------------------------------------
@@ -459,14 +459,14 @@
       scenarioContainer.appendChild(customGrid);
     }
 
-    // Create button
+    // Create button — launches the wizard
     const createBtn = document.createElement("button");
     createBtn.className = "create-list-btn";
     createBtn.type = "button";
     createBtn.innerHTML =
-      '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>' +
-      '<span>Create your own list</span>';
-    createBtn.addEventListener("click", openNewListModal);
+      '<span class="create-list-sparkle" aria-hidden="true">✨</span>' +
+      '<span>Build me a list</span>';
+    createBtn.addEventListener("click", openWizard);
     scenarioContainer.appendChild(createBtn);
   }
 
@@ -565,18 +565,13 @@
     const text = clampText(newItemInput.value, MAX_ITEM_TEXT_LENGTH);
     if (!text) return;
 
-    let targetCat;
-    if (list.isCustom) {
-      if (list.categories.length === 0) {
-        list.categories.push({ name: CUSTOM_DEFAULT_CATEGORY, items: [] });
-      }
-      targetCat = list.categories[0];
-    } else {
-      targetCat = list.categories.find(function (c) { return c.name === CUSTOM_CATEGORY; });
-      if (!targetCat) {
-        targetCat = { name: CUSTOM_CATEGORY, items: [] };
-        list.categories.push(targetCat);
-      }
+    // All user additions go into a lazily-created "My additions" category,
+    // for both template and custom lists. Keeps provenance clear and
+    // simplifies the add flow.
+    let targetCat = list.categories.find(function (c) { return c.name === CUSTOM_CATEGORY; });
+    if (!targetCat) {
+      targetCat = { name: CUSTOM_CATEGORY, items: [] };
+      list.categories.push(targetCat);
     }
 
     if (targetCat.items.length >= MAX_ITEMS_PER_CATEGORY) {
@@ -660,49 +655,133 @@
     });
   });
 
-  // --- New list modal ------------------------------------------------
+  // --- Wizard --------------------------------------------------------
 
-  let selectedEmoji = "📋";
+  const wizardState = {
+    active: false,
+    step: 1,
+    answers: {},
+  };
 
-  emojiPicker.querySelectorAll(".emoji-option").forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      selectedEmoji = btn.dataset.emoji;
-      emojiPicker.querySelectorAll(".emoji-option").forEach(function (b) { b.classList.remove("selected"); });
-      btn.classList.add("selected");
-    });
-  });
-
-  function openNewListModal() {
-    newListForm.reset();
-    selectedEmoji = "📋";
-    emojiPicker.querySelectorAll(".emoji-option").forEach(function (b) { b.classList.remove("selected"); });
-    const defaultBtn = emojiPicker.querySelector('.emoji-option[data-emoji="📋"]');
-    if (defaultBtn) defaultBtn.classList.add("selected");
-    newListModal.classList.remove("hidden");
-    setTimeout(function () { newListNameInput.focus(); }, 100);
+  function openWizard() {
+    wizardState.active = true;
+    wizardState.step = 1;
+    wizardState.answers = {};
+    try {
+      history.pushState({ wizard: true }, "", "#wizard");
+    } catch (_) { /* history API unavailable */ }
+    wizardScreen.classList.remove("hidden");
+    wizardScreen.setAttribute("aria-hidden", "false");
+    document.body.classList.add("wizard-active");
+    renderWizard();
   }
 
-  cancelNewListBtn.addEventListener("click", function () { newListModal.classList.add("hidden"); });
-  newListModal.addEventListener("click", function (e) {
-    if (e.target === newListModal) newListModal.classList.add("hidden");
+  function closeWizard() {
+    if (!wizardState.active) return;
+    wizardState.active = false;
+    wizardScreen.classList.add("hidden");
+    wizardScreen.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("wizard-active");
+    // Pop our wizard history state so browser back doesn't re-enter it
+    try {
+      if (history.state && history.state.wizard) history.back();
+    } catch (_) { /* ignore */ }
+  }
+
+  function renderWizard() {
+    if (!window.WIZARD) return;
+    const stepIdx = wizardState.step - 1;
+    const step = window.WIZARD.STEPS[stepIdx];
+    if (!step) return;
+
+    // Progress dots
+    wizardProgress.innerHTML = "";
+    for (let i = 0; i < window.WIZARD.STEPS.length; i++) {
+      const dot = document.createElement("div");
+      dot.className = "wizard-dot";
+      if (i < stepIdx) dot.classList.add("completed");
+      if (i === stepIdx) dot.classList.add("active");
+      wizardProgress.appendChild(dot);
+    }
+
+    wizardQuestion.textContent = step.question;
+
+    // Options
+    wizardOptions.innerHTML = "";
+    step.options.forEach(function (opt) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "wizard-option";
+      btn.innerHTML =
+        '<div class="wizard-option-emoji" aria-hidden="true">' + escapeHTML(opt.emoji) + '</div>' +
+        '<div class="wizard-option-text">' +
+          '<div class="wizard-option-title">' + escapeHTML(opt.title) + '</div>' +
+          '<div class="wizard-option-sub">' + escapeHTML(opt.sub) + '</div>' +
+        '</div>';
+      btn.addEventListener("click", function () {
+        wizardState.answers[step.key] = opt.value;
+        advanceWizardStep();
+      });
+      wizardOptions.appendChild(btn);
+    });
+
+    // Back button visibility
+    if (wizardState.step > 1) {
+      wizardBackBtn.classList.remove("hidden");
+    } else {
+      wizardBackBtn.classList.add("hidden");
+    }
+
+    // Scroll to top on each step change
+    if (wizardScreen) wizardScreen.scrollTop = 0;
+  }
+
+  function advanceWizardStep() {
+    if (!window.WIZARD) return;
+    if (wizardState.step >= window.WIZARD.STEPS.length) {
+      finishWizard();
+      return;
+    }
+    wizardState.step++;
+    renderWizard();
+  }
+
+  function wizardBack() {
+    if (wizardState.step <= 1) {
+      closeWizard();
+    } else {
+      wizardState.step--;
+      renderWizard();
+    }
+  }
+
+  wizardBackBtn.addEventListener("click", wizardBack);
+  wizardCloseBtn.addEventListener("click", closeWizard);
+
+  window.addEventListener("popstate", function (e) {
+    if (wizardState.active && !(e.state && e.state.wizard)) {
+      wizardState.active = false;
+      wizardScreen.classList.add("hidden");
+      wizardScreen.setAttribute("aria-hidden", "true");
+      document.body.classList.remove("wizard-active");
+    }
   });
 
-  newListForm.addEventListener("submit", function (e) {
-    e.preventDefault();
-    const name = clampText(newListNameInput.value, MAX_LIST_NAME_LENGTH);
-    if (!name) return;
+  function finishWizard() {
+    if (!window.WIZARD) return;
+    const spec = window.WIZARD.generateListSpec(wizardState.answers);
     const id = "custom-" + uid();
     state.lists[id] = {
       isCustom: true,
-      name: name,
-      emoji: selectedEmoji,
-      description: "Custom list",
-      categories: [{ name: CUSTOM_DEFAULT_CATEGORY, items: [] }],
+      name: spec.name,
+      emoji: spec.emoji,
+      description: spec.description,
+      categories: spec.categories,
     };
     save();
-    newListModal.classList.add("hidden");
+    closeWizard();
     showList(id);
-  });
+  }
 
   // --- Error boundary ------------------------------------------------
 

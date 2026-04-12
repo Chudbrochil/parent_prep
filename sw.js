@@ -1,11 +1,12 @@
 // ParentPrep service worker — minimal offline cache.
-const CACHE = "parentprep-v9";
+const CACHE = "parentprep-v10";
 const FILES = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
   "./templates.js",
+  "./wizard.js",
   "./sw-register.js",
   "./manifest.json",
   "./icon.svg",

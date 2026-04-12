@@ -838,6 +838,213 @@ main {
   margin: 0 0 8px 0;
 }
 
+/* ======================== WIZARD (full-screen) ======================== */
+
+.wizard-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  background:
+    radial-gradient(ellipse 100% 60% at 50% 0%, rgba(79, 124, 95, 0.08), transparent 70%),
+    var(--bg);
+  display: flex;
+  flex-direction: column;
+  animation: slideUpIn 0.3s var(--ease);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+body.wizard-active {
+  overflow: hidden;
+}
+
+@keyframes slideUpIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.wizard-screen.hidden {
+  display: none !important;
+}
+
+.wizard-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: env(safe-area-inset-top, 0) 16px 0 16px;
+  height: calc(62px + env(safe-area-inset-top, 0));
+  background: rgba(250, 248, 243, 0.82);
+  backdrop-filter: saturate(180%) blur(14px);
+  -webkit-backdrop-filter: saturate(180%) blur(14px);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.wizard-header .icon-btn {
+  color: var(--ink);
+}
+
+.wizard-header-spacer {
+  width: 48px;
+  flex-shrink: 0;
+}
+
+.wizard-progress {
+  flex: 1;
+  max-width: 240px;
+  display: flex;
+  gap: 6px;
+  margin: 0 8px;
+}
+
+.wizard-dot {
+  flex: 1;
+  height: 5px;
+  background: var(--border);
+  border-radius: 3px;
+  transition: background 0.3s var(--ease);
+}
+
+.wizard-dot.completed {
+  background: var(--accent-light);
+}
+
+.wizard-dot.active {
+  background: var(--accent);
+}
+
+.wizard-content {
+  flex: 1;
+  padding: 36px 20px 24px 20px;
+  max-width: 560px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.wizard-question {
+  font-size: 26px;
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+  margin: 10px 0 28px 0;
+  line-height: 1.22;
+}
+
+.wizard-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wizard-option {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 20px;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  transition: transform 0.12s var(--ease),
+              background 0.15s var(--ease),
+              border-color 0.15s var(--ease),
+              box-shadow 0.15s var(--ease);
+}
+
+.wizard-option:hover {
+  background: var(--accent-softer);
+  border-color: var(--accent-light);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.wizard-option:active {
+  transform: translateY(0) scale(0.985);
+  background: var(--accent-soft);
+}
+
+.wizard-option-emoji {
+  width: 52px;
+  height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  line-height: 1;
+  background: var(--accent-soft);
+  border-radius: 14px;
+  flex-shrink: 0;
+}
+
+.wizard-option-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.wizard-option-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.015em;
+  margin-bottom: 3px;
+}
+
+.wizard-option-sub {
+  font-size: 13px;
+  color: var(--ink-soft);
+  line-height: 1.4;
+}
+
+.wizard-footer {
+  padding: 14px 20px calc(14px + env(safe-area-inset-bottom, 0)) 20px;
+  max-width: 560px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.wizard-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 10px 14px;
+  border-radius: 10px;
+  transition: background 0.15s var(--ease), color 0.15s var(--ease);
+}
+
+.wizard-back:hover {
+  background: var(--accent-softer);
+  color: var(--accent);
+}
+
+@media (min-width: 640px) {
+  .wizard-question {
+    font-size: 34px;
+  }
+  .wizard-content {
+    padding: 48px 24px 32px 24px;
+  }
+}
+
+/* Sparkle icon on the create-list button */
+.create-list-sparkle {
+  font-size: 18px;
+  margin-right: 2px;
+}
+
 /* ======================== DANGER VARIANT FOR MENU ======================== */
 
 .menu-btn.danger .menu-title {
