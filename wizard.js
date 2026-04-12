@@ -67,56 +67,67 @@
   //   - omitted (always matches)
   //   - an object: all key/value pairs must match (AND semantics)
   //   - an array of objects: at least one must fully match (OR semantics)
+  //
+  // `key` groups items that are mutually exclusive variants of the same
+  // thing (e.g. different diaper quantities). When the matcher finds a
+  // hit with a given `key`, it skips any later catalog items sharing
+  // that key. So the catalog MUST list higher-priority variants (biggest
+  // / most specific) first within each group.
 
   const CATALOG = [
     // CLOTHES
-    { text: "1 spare outfit", category: "Clothes", when: { length: ["few-hours"] } },
-    { text: "2-3 spare outfits", category: "Clothes", when: { length: ["one-night", "two-three-nights"] } },
-    { text: "4-5 spare outfits", category: "Clothes", when: { length: ["extended"] } },
-    { text: "Muslin cloth / small blanket (multi-use)", category: "Clothes" },
+    //   outfits-qty: 4-5 > 2-3 > 1 spare
+    { text: "4-5 spare outfits", category: "Clothes", key: "outfits-qty", when: { length: ["extended"] } },
+    { text: "2-3 spare outfits", category: "Clothes", key: "outfits-qty", when: { length: ["one-night", "two-three-nights"] } },
+    { text: "1 spare outfit", category: "Clothes", key: "outfits-qty", when: { length: ["few-hours"] } },
+    { text: "Muslin cloth / small blanket (multi-use)", category: "Clothes", when: { length: ["few-hours"] } },
     { text: "Weather layers + hat", category: "Clothes" },
-    { text: "Bib", category: "Clothes", when: { length: ["few-hours"] } },
-    { text: "Bibs (2-4)", category: "Clothes", when: { length: ["one-night", "two-three-nights", "extended"] } },
+    //   bibs-qty: 2-4 > 1
+    { text: "Bibs (2-4)", category: "Clothes", key: "bibs-qty", when: { length: ["one-night", "two-three-nights", "extended"] } },
+    { text: "Bib", category: "Clothes", key: "bibs-qty", when: { length: ["few-hours"] } },
     { text: "Pajamas", category: "Clothes", when: { length: ["one-night", "two-three-nights", "extended"] } },
     { text: "Extra pajamas (night leaks happen)", category: "Clothes", when: { length: ["two-three-nights", "extended"] } },
     { text: "Change of shirt for parent", category: "Clothes", when: [{ length: ["two-three-nights", "extended"] }, { transport: ["flying"] }] },
     { text: "Sweater / extra layer", category: "Clothes", when: { length: ["extended"] } },
 
     // SLEEPING
-    { text: "Pacifier", category: "Sleeping" },
-    { text: "2 pacifiers (for ear pressure on takeoff)", category: "Sleeping", when: { transport: ["flying"] } },
+    //   pacifier-qty: 2 (flying) > 1 default
+    { text: "2 pacifiers (for ear pressure on takeoff)", category: "Sleeping", key: "pacifier-qty", when: { transport: ["flying"] } },
+    { text: "Pacifier", category: "Sleeping", key: "pacifier-qty" },
     { text: "Comfort toy / lovey", category: "Sleeping", when: { length: ["one-night", "two-three-nights", "extended"] } },
     { text: "Sleep sack", category: "Sleeping", when: { length: ["one-night", "two-three-nights", "extended"] } },
     { text: "Pack and play bassinet", category: "Sleeping", when: { sleepsAt: ["other-house"], length: ["two-three-nights", "extended"] } },
     { text: "2 sheets for the pack and play", category: "Sleeping", when: { sleepsAt: ["other-house"], length: ["two-three-nights", "extended"] } },
     { text: "Portable white noise / sound machine", category: "Sleeping", when: { length: ["one-night", "two-three-nights", "extended"] } },
-    { text: "Night light", category: "Sleeping", when: { sleepsAt: ["other-house", "hotel"], length: ["one-night", "two-three-nights", "extended"] } },
+    { text: "Night light", category: "Sleeping", when: { sleepsAt: ["other-house"], length: ["two-three-nights", "extended"] } },
     { text: "Baby monitor", category: "Sleeping", when: { sleepsAt: ["other-house"], length: ["two-three-nights", "extended"] } },
     { text: "Blackout shades / window cover", category: "Sleeping", when: { sleepsAt: ["other-house"], length: ["extended"] } },
 
     // EATING
     { text: "Bottle + formula OR nursing setup", category: "Eating" },
-    { text: "Pre-measured formula portions", category: "Eating", when: { length: ["one-night", "two-three-nights", "extended"] } },
-    { text: "Pump + cooler (if nursing)", category: "Eating", when: { length: ["one-night", "two-three-nights", "extended"] } },
+    { text: "Pre-measured formula portions", category: "Eating", when: { length: ["two-three-nights", "extended"] } },
+    { text: "Pump + cooler (if nursing)", category: "Eating", when: { length: ["two-three-nights", "extended"] } },
     { text: "Nursing cover", category: "Eating" },
-    { text: "Nursing pads", category: "Eating", when: { length: ["one-night", "two-three-nights", "extended"] } },
-    { text: "2 burp cloths", category: "Eating", when: { length: ["few-hours"] } },
-    { text: "Burp cloths (3-4)", category: "Eating", when: { length: ["one-night", "two-three-nights", "extended"] } },
+    { text: "Nursing pads", category: "Eating", when: { length: ["two-three-nights", "extended"] } },
+    //   burp-cloths-qty: 3-4 > 2
+    { text: "Burp cloths (3-4)", category: "Eating", key: "burp-cloths-qty", when: { length: ["one-night", "two-three-nights", "extended"] } },
+    { text: "2 burp cloths", category: "Eating", key: "burp-cloths-qty", when: { length: ["few-hours"] } },
     { text: "Water bottle (for parent)", category: "Eating" },
     { text: "Nipple shields", category: "Eating", when: { sleepsAt: ["other-house"], length: ["extended"] } },
-    { text: "Water warmer for bottles", category: "Eating", when: { sleepsAt: ["other-house"], length: ["two-three-nights", "extended"] } },
+    { text: "Water warmer for bottles", category: "Eating", when: { sleepsAt: ["other-house"], length: ["extended"] } },
     { text: "Sippy cup with water", category: "Eating", when: { age: ["6-9mo", "9-12mo", "12mo-plus"] } },
     { text: "Food pouches (multiple flavors)", category: "Eating", when: { age: ["6-9mo", "9-12mo", "12mo-plus"] } },
     { text: "Baby spoons", category: "Eating", when: { age: ["6-9mo", "9-12mo", "12mo-plus"] } },
-    { text: "Puffs / crackers", category: "Eating", when: { age: ["9-12mo", "12mo-plus"] } },
-    { text: "Snack catcher / small container", category: "Eating", when: { age: ["9-12mo", "12mo-plus"] } },
+    { text: "Puffs / crackers", category: "Eating", when: { age: ["9-12mo", "12mo-plus"], length: ["two-three-nights", "extended"] } },
+    { text: "Snack catcher / small container", category: "Eating", when: { age: ["9-12mo", "12mo-plus"], length: ["two-three-nights", "extended"] } },
 
     // DIAPERS
-    { text: "2-3 diapers", category: "Diapers", when: { length: ["few-hours"] } },
-    { text: "12-16 diapers", category: "Diapers", when: { length: ["one-night", "two-three-nights"] } },
-    { text: "20+ diapers", category: "Diapers", when: [{ length: ["extended"] }, { transport: ["flying"] }] },
+    //   diapers-qty: 20+ > 12-16 > 2-3
+    { text: "20+ diapers", category: "Diapers", key: "diapers-qty", when: [{ length: ["extended"] }, { transport: ["flying"] }] },
+    { text: "12-16 diapers", category: "Diapers", key: "diapers-qty", when: { length: ["one-night", "two-three-nights"] } },
+    { text: "2-3 diapers", category: "Diapers", key: "diapers-qty", when: { length: ["few-hours"] } },
     { text: "Wipes pack", category: "Diapers" },
-    { text: "Extra travel wipes pack", category: "Diapers", when: { length: ["one-night", "two-three-nights", "extended"] } },
+    { text: "Extra travel wipes pack", category: "Diapers", when: { length: ["two-three-nights", "extended"] } },
     { text: "Travel changing pad", category: "Diapers" },
     { text: "Diaper rash cream", category: "Diapers" },
     { text: "Disposable bags for dirty diapers", category: "Diapers" },
@@ -125,20 +136,19 @@
     { text: "Car seat", category: "Transport" },
     { text: "Stroller", category: "Transport" },
     { text: "Baby carrier", category: "Transport" },
-    { text: "Stroller rain cover", category: "Transport", when: [{ transport: ["flying"] }, { length: ["extended"] }] },
+    { text: "Stroller rain cover", category: "Transport", when: { transport: ["flying"] } },
 
     // ENTERTAINMENT
     { text: "Small toy / rattle", category: "Entertainment" },
-    { text: "Teethers", category: "Entertainment", when: { age: ["3-6mo", "6-9mo", "9-12mo"] } },
-    { text: "Board books", category: "Entertainment", when: { age: ["6-9mo", "9-12mo", "12mo-plus"] } },
-    { text: "Small new toy (surprise for the journey)", category: "Entertainment", when: { transport: ["flying", "long-drive"] } },
+    { text: "Teethers", category: "Entertainment", when: { age: ["6-9mo", "9-12mo"] } },
+    { text: "Board books", category: "Entertainment", when: { age: ["6-9mo", "9-12mo", "12mo-plus"], length: ["two-three-nights", "extended"] } },
+    { text: "Small new toy (surprise for the journey)", category: "Entertainment", when: { transport: ["flying"] } },
     { text: "Tablet with downloaded shows", category: "Entertainment", when: { age: ["9-12mo", "12mo-plus"], transport: ["flying", "long-drive"] } },
     { text: "Kid-sized headphones", category: "Entertainment", when: { age: ["9-12mo", "12mo-plus"], transport: ["flying"] } },
 
     // HEALTH & DOCUMENTS
     { text: "Baby Tylenol (ask pediatrician)", category: "Health & documents", when: { length: ["one-night", "two-three-nights", "extended"] } },
-    { text: "Baby Ibuprofen (6mo+, ask pediatrician)", category: "Health & documents", when: { age: ["6-9mo", "9-12mo", "12mo-plus"], length: ["one-night", "two-three-nights", "extended"] } },
-    { text: "Thermometer", category: "Health & documents", when: { length: ["one-night", "two-three-nights", "extended"] } },
+    { text: "Thermometer", category: "Health & documents", when: { length: ["two-three-nights", "extended"] } },
     { text: "First aid basics (band-aids, saline drops)", category: "Health & documents", when: { length: ["two-three-nights", "extended"] } },
     { text: "Health insurance card", category: "Health & documents", when: [{ length: ["one-night", "two-three-nights", "extended"] }, { transport: ["flying", "long-drive"] }] },
     { text: "Birth certificate (required for infant flights)", category: "Health & documents", when: { transport: ["flying"], age: ["newborn", "3-6mo", "6-9mo", "9-12mo"] } },
@@ -147,15 +157,13 @@
 
     // PARENT SURVIVAL
     { text: "Hand sanitizer", category: "Parent survival" },
-    { text: "Tissues", category: "Parent survival" },
-    { text: "Disinfecting wipes", category: "Parent survival", when: [{ transport: ["flying"] }, { length: ["two-three-nights", "extended"] }] },
+    { text: "Disinfecting wipes", category: "Parent survival", when: { transport: ["flying"] } },
     { text: "Ziploc bags (multiple sizes)", category: "Parent survival", when: [{ transport: ["flying"] }, { length: ["two-three-nights", "extended"] }] },
     { text: "Barf bags / vomit ziplocs", category: "Parent survival", when: { transport: ["long-drive", "flying"] } },
-    { text: "Snacks + water for parent", category: "Parent survival", when: [{ length: ["two-three-nights", "extended"] }, { transport: ["long-drive", "flying"] }] },
+    { text: "Snacks + water for parent", category: "Parent survival", when: { transport: ["long-drive", "flying"] } },
     { text: "Trash bag for the car", category: "Parent survival", when: { transport: ["long-drive"] } },
-    { text: "Power bank + extra charger cables", category: "Parent survival", when: [{ transport: ["long-drive", "flying"] }, { length: ["two-three-nights", "extended"] }] },
-    { text: "Sunhat (if outdoors)", category: "Parent survival" },
-    { text: "Sunscreen (6mo+)", category: "Parent survival", when: { age: ["6-9mo", "9-12mo", "12mo-plus"] } },
+    { text: "Power bank + extra charger cables", category: "Parent survival", when: { transport: ["long-drive", "flying"] } },
+    { text: "Sunhat + sunscreen (6mo+)", category: "Parent survival", when: { age: ["6-9mo", "9-12mo", "12mo-plus"] } },
     { text: "Laundry pods (free and clear)", category: "Parent survival", when: { length: ["extended"] } },
   ];
 
@@ -203,15 +211,23 @@
   // --- List composition ----------------------------------------------
 
   function generateListSpec(answers) {
-    // Filter catalog
-    let matched = CATALOG.filter(function (item) { return itemMatches(item, answers); });
-
-    // Dedupe by text (in case OR conditions cause duplicates)
-    const seen = {};
+    // Walk the catalog in declaration order (which is priority order
+    // within each `key` group) and keep the first match for each key.
+    // Items without a key still dedupe by exact text as a safety net.
+    const seenKeys = {};
+    const seenTexts = {};
     const deduped = [];
-    matched.forEach(function (item) {
-      if (!seen[item.text]) { seen[item.text] = true; deduped.push(item); }
-    });
+    for (let i = 0; i < CATALOG.length; i++) {
+      const item = CATALOG[i];
+      if (!itemMatches(item, answers)) continue;
+      if (item.key) {
+        if (seenKeys[item.key]) continue;
+        seenKeys[item.key] = true;
+      }
+      if (seenTexts[item.text]) continue;
+      seenTexts[item.text] = true;
+      deduped.push(item);
+    }
 
     // Fall back to safety default if nothing matched
     if (deduped.length === 0) {

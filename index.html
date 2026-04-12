@@ -229,6 +229,20 @@
   </div>
 </div>
 
+<!--
+  Netlify form detection helper. Never shown to users; parsed by Netlify
+  at build time so the Forms dashboard registers the "feedback" form.
+  The real submissions come from the dynamic form inside #feedbackModal
+  via fetch. Both forms share name="feedback".
+-->
+<form name="feedback" data-netlify="true" netlify-honeypot="bot-field" hidden>
+  <input type="hidden" name="form-name" value="feedback">
+  <input type="text" name="name">
+  <input type="email" name="email">
+  <textarea name="message"></textarea>
+  <input name="bot-field">
+</form>
+
 <script src="templates.js"></script>
 <script src="wizard.js"></script>
 <script src="app.js"></script>
