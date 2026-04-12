@@ -1,4 +1,4 @@
-// ParentPrep wizard — "TurboTax for baby packing"
+// Packing for Parents — wizard ("TurboTax for baby packing")
 //
 // Asks the user four questions, then composes a personalized list by
 // filtering a catalog of ~70 candidate items against their answers.

@@ -1,0 +1,29 @@
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Env / secrets (defense in depth — there are none today)
+.env
+.env.*
+*.pem
+*.key
+secrets.json
+
+# Node / build output (not used today, but cheap to have)
+node_modules/
+dist/
+build/
+
+# Private notes
+DEPLOY.md
+NOTES.md
+TODO.md
+*.local.md
+
+# Test server logs
+*.log

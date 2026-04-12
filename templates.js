@@ -1,4 +1,4 @@
-// ParentPrep — four trip templates, each grouped into categories.
+// Packing for Parents — four trip templates, each grouped into categories.
 // Users can also create their own custom lists in the app.
 // Edit freely — this is the file to refine with your parenting group.
 window.TEMPLATES = [

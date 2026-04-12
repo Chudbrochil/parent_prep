@@ -95,7 +95,7 @@
       if (legacyRaw) {
         try {
           const legacyData = JSON.parse(legacyRaw);
-          state.lists = migrateLegacy(legacyData, LEGACY_KEYS[i]) || {};
+          state.lists = migrateLegacy(legacyData) || {};
           // Persist in new shape and remove old key
           save();
           safeRemove(LEGACY_KEYS[i]);
@@ -116,7 +116,7 @@
     return envelope;
   }
 
-  function migrateLegacy(legacyData, fromKey) {
+  function migrateLegacy(legacyData) {
     // v2, v3, v4, v5 all stored a map of { [listId]: list }
     // v1 stored an array of lists
     if (Array.isArray(legacyData)) {
