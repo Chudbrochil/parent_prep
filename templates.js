@@ -14,6 +14,7 @@ window.TEMPLATES = [
         items: [
           "1 spare outfit",
           "Bib",
+          "Muslin cloth / small blanket (multi-use)",
         ],
       },
       {
@@ -21,6 +22,7 @@ window.TEMPLATES = [
         items: [
           "Bottle + formula OR nursing cover (if feeding time)",
           "2 burp cloths",
+          "Water bottle (for parent)",
         ],
       },
       {
@@ -29,6 +31,7 @@ window.TEMPLATES = [
           "2-3 diapers",
           "Wipes pack",
           "Travel changing pad",
+          "Diaper cream (small tube)",
           "Disposable bags",
         ],
       },
@@ -42,7 +45,9 @@ window.TEMPLATES = [
       {
         name: "Other",
         items: [
-          "Pacifier",
+          "Pacifier + clip",
+          "Small toy or lovey",
+          "Tissues",
           "Hand sanitizer",
           "Hat (if sunny)",
         ],
@@ -60,9 +65,10 @@ window.TEMPLATES = [
         name: "Clothes",
         items: [
           "2-3 outfits",
-          "Pajamas",
+          "2 sets of pajamas (night leaks happen)",
           "Weather layers + hat",
           "Bibs (2)",
+          "Muslin blanket (multi-use)",
         ],
       },
       {
@@ -82,12 +88,13 @@ window.TEMPLATES = [
           "Formula pre-measured",
           "Nursing cover / pads (if breastfeeding)",
           "Burp cloths (3-4)",
+          "Food pouches / snacks (6mo+)",
         ],
       },
       {
         name: "Diapers",
         items: [
-          "Diapers (8-10)",
+          "Diapers (12-16)",
           "Wipes pack + travel pack",
           "Travel changing pad",
           "Diaper rash cream",
@@ -107,7 +114,11 @@ window.TEMPLATES = [
         items: [
           "Baby Tylenol (ask pediatrician)",
           "Thermometer",
-          "Toiletries if needed",
+          "First aid basics (band-aids, saline drops)",
+          "Bath supplies if not provided (baby soap, washcloth)",
+          "Small book or quiet toy",
+          "Sunscreen + sunhat (if outdoors, 6mo+)",
+          "Wet bag / laundry bag for dirty clothes",
           "Health insurance card",
         ],
       },
@@ -123,11 +134,12 @@ window.TEMPLATES = [
       {
         name: "Clothes",
         items: [
-          "Spare outfits (3-4)",
+          "Spare outfits (4-5)",
           "Spare swaddles / muslins (multi-use)",
           "Weather layers + hat",
           "Change of shirt for parent",
           "Bibs",
+          "Pajamas",
         ],
       },
       {
@@ -146,17 +158,18 @@ window.TEMPLATES = [
           "Formula pre-measured OR pump + cooler",
           "Nursing cover",
           "Nursing pads",
-          "Burp cloths (3-4)",
+          "Burp cloths (4-5)",
           "Sippy cup with water (6mo+)",
           "Food pouches (6mo+)",
           "Baby spoons (6mo+)",
           "Puffs / crackers (6mo+)",
+          "Snacks + water for parent",
         ],
       },
       {
         name: "Diapers",
         items: [
-          "Diapers (10+)",
+          "Diapers (15+, more for delays)",
           "Full wipes pack + travel pack",
           "Travel changing pad",
           "Diaper rash cream",
@@ -169,19 +182,40 @@ window.TEMPLATES = [
           "Car seat (gate-check if flying)",
           "Stroller (gate-check)",
           "Baby carrier (hands-free at airport)",
+          "Stroller rain cover",
         ],
       },
       {
-        name: "Other",
+        name: "Entertainment",
+        items: [
+          "Teethers",
+          "Small new toy (surprise for the journey)",
+          "Board books",
+          "Tablet with downloaded shows (9mo+)",
+          "Kid-sized headphones (9mo+)",
+        ],
+      },
+      {
+        name: "Health & documents",
+        items: [
+          "Baby Tylenol + Ibuprofen 6mo+ (ask pediatrician)",
+          "Thermometer",
+          "Prescription medications",
+          "Birth certificate (required for infant flights)",
+          "Passport (for international travel)",
+          "Health insurance card",
+          "Sunhat + sunscreen (6mo+)",
+        ],
+      },
+      {
+        name: "Parent survival",
         items: [
           "Hand sanitizer",
           "Disinfecting wipes",
-          "Baby Tylenol + Ibuprofen 6mo+ (ask pediatrician)",
-          "Thermometer",
-          "Birth certificate (required for infant flights)",
-          "Health insurance card",
-          "Sunhat + sunscreen (6mo+)",
-          "Teethers",
+          "Ziploc bags (multiple sizes)",
+          "Barf bags / vomit ziplocs",
+          "Trash bag for the car",
+          "Power bank + extra charger cables",
         ],
       },
     ],
@@ -191,7 +225,7 @@ window.TEMPLATES = [
     id: "ruths-list",
     name: "Ruth's list",
     emoji: "🏡",
-    description: "Extended stay — bringing the full setup",
+    description: "Extended stay — bringing the full home setup",
     categories: [
       {
         name: "Clothes",
@@ -209,7 +243,7 @@ window.TEMPLATES = [
           "2 swaddles, 1 sleep sack",
           "2 sheets",
           "Pack and play bassinet",
-          "Blackout shades?",
+          "Blackout shades",
           "Noise machine",
           "Night light",
           "Baby monitor",
@@ -219,7 +253,7 @@ window.TEMPLATES = [
         name: "Eating",
         items: [
           "Nipple shields",
-          "Pump?",
+          "Pump",
           "Formula",
           "Bottles",
           "Water warmer",
