@@ -821,6 +821,23 @@ main {
   transform: scale(0.97);
 }
 
+.primary-btn.danger {
+  background: var(--danger);
+  box-shadow: 0 4px 12px rgba(192, 57, 43, 0.3);
+}
+
+.primary-btn.danger:hover {
+  background: #a03322;
+  box-shadow: 0 6px 16px rgba(192, 57, 43, 0.4);
+}
+
+.confirm-message {
+  font-size: 15px;
+  color: var(--ink-soft);
+  line-height: 1.55;
+  margin: 0 0 8px 0;
+}
+
 /* ======================== DANGER VARIANT FOR MENU ======================== */
 
 .menu-btn.danger .menu-title {

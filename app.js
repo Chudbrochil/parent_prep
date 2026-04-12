@@ -259,9 +259,73 @@
   const newListNameInput = document.getElementById("newListName");
   const cancelNewListBtn = document.getElementById("cancelNewList");
   const emojiPicker = document.getElementById("emojiPicker");
+  const renameModal = document.getElementById("renameModal");
+  const renameForm = document.getElementById("renameForm");
+  const renameInput = document.getElementById("renameInput");
+  const renameCancelBtn = document.getElementById("renameCancelBtn");
+  const confirmModal = document.getElementById("confirmModal");
+  const confirmTitle = document.getElementById("confirmTitle");
+  const confirmMessage = document.getElementById("confirmMessage");
+  const confirmCancelBtn = document.getElementById("confirmCancelBtn");
+  const confirmOkBtn = document.getElementById("confirmOkBtn");
 
   if (newItemInput) newItemInput.setAttribute("maxlength", String(MAX_ITEM_TEXT_LENGTH));
   if (newListNameInput) newListNameInput.setAttribute("maxlength", String(MAX_LIST_NAME_LENGTH));
+  if (renameInput) renameInput.setAttribute("maxlength", String(MAX_LIST_NAME_LENGTH));
+
+  // --- Reusable modal helpers ----------------------------------------
+
+  let confirmCallback = null;
+  let renameCallback = null;
+
+  function showConfirmDialog(opts, onConfirm) {
+    confirmTitle.textContent = opts.title || "Are you sure?";
+    confirmMessage.textContent = opts.message || "";
+    confirmOkBtn.textContent = opts.confirmText || "Confirm";
+    confirmOkBtn.classList.toggle("danger", !!opts.danger);
+    confirmCallback = onConfirm;
+    confirmModal.classList.remove("hidden");
+  }
+
+  function hideConfirmDialog() {
+    confirmModal.classList.add("hidden");
+    confirmCallback = null;
+  }
+
+  confirmOkBtn.addEventListener("click", function () {
+    const cb = confirmCallback;
+    hideConfirmDialog();
+    if (cb) cb();
+  });
+  confirmCancelBtn.addEventListener("click", hideConfirmDialog);
+  confirmModal.addEventListener("click", function (e) {
+    if (e.target === confirmModal) hideConfirmDialog();
+  });
+
+  function showRenameDialog(currentName, onSubmit) {
+    renameInput.value = currentName || "";
+    renameCallback = onSubmit;
+    renameModal.classList.remove("hidden");
+    setTimeout(function () { renameInput.focus(); renameInput.select(); }, 100);
+  }
+
+  function hideRenameDialog() {
+    renameModal.classList.add("hidden");
+    renameCallback = null;
+  }
+
+  renameCancelBtn.addEventListener("click", hideRenameDialog);
+  renameModal.addEventListener("click", function (e) {
+    if (e.target === renameModal) hideRenameDialog();
+  });
+  renameForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    const clean = clampText(renameInput.value, MAX_LIST_NAME_LENGTH);
+    if (!clean) return;
+    const cb = renameCallback;
+    hideRenameDialog();
+    if (cb) cb(clean);
+  });
 
   // --- Navigation ----------------------------------------------------
 
@@ -552,39 +616,48 @@
   });
 
   resetBtn.addEventListener("click", function () {
-    if (!confirm("Reset this list to the default items? Anything you've added or removed will be lost.")) return;
-    const tpl = getTemplate(state.activeListId);
-    if (!tpl) return;
-    state.lists[state.activeListId] = freshListFromTemplate(tpl);
-    save();
-    renderList();
     listMenuModal.classList.add("hidden");
+    showConfirmDialog({
+      title: "Reset this list?",
+      message: "This restores the original template items. Anything you added or removed will be lost.",
+      confirmText: "Reset",
+      danger: true,
+    }, function () {
+      const tpl = getTemplate(state.activeListId);
+      if (!tpl) return;
+      state.lists[state.activeListId] = freshListFromTemplate(tpl);
+      save();
+      renderList();
+    });
   });
 
   renameBtn.addEventListener("click", function () {
     const list = state.lists[state.activeListId];
     if (!list || !list.isCustom) return;
-    const newName = prompt("Rename list:", list.name);
-    if (newName) {
-      const clean = clampText(newName, MAX_LIST_NAME_LENGTH);
-      if (clean) {
-        list.name = clean;
-        save();
-        const meta = getListMeta(state.activeListId);
-        headerTitle.textContent = meta.emoji + " " + meta.name;
-      }
-    }
     listMenuModal.classList.add("hidden");
+    showRenameDialog(list.name, function (newName) {
+      list.name = newName;
+      save();
+      const meta = getListMeta(state.activeListId);
+      headerTitle.textContent = meta.emoji + " " + meta.name;
+      renderList();
+    });
   });
 
   deleteBtn.addEventListener("click", function () {
     const list = state.lists[state.activeListId];
     if (!list || !list.isCustom) return;
-    if (!confirm('Delete "' + list.name + '"? This cannot be undone.')) return;
-    delete state.lists[state.activeListId];
-    save();
     listMenuModal.classList.add("hidden");
-    showHome();
+    showConfirmDialog({
+      title: "Delete this list?",
+      message: '"' + list.name + '" and all its items will be permanently removed. This cannot be undone.',
+      confirmText: "Delete",
+      danger: true,
+    }, function () {
+      delete state.lists[state.activeListId];
+      save();
+      showHome();
+    });
   });
 
   // --- New list modal ------------------------------------------------
@@ -644,12 +717,18 @@
         window.location.reload();
       });
       document.getElementById("crashReset").addEventListener("click", function () {
-        if (!confirm("Clear all your saved lists and start fresh? This cannot be undone.")) return;
-        try {
-          localStorage.removeItem(STORAGE_KEY);
-          LEGACY_KEYS.forEach(function (k) { safeRemove(k); });
-        } catch (_) { /* ignore */ }
-        window.location.reload();
+        showConfirmDialog({
+          title: "Clear all saved data?",
+          message: "All your lists and packed items will be permanently removed. This cannot be undone.",
+          confirmText: "Clear everything",
+          danger: true,
+        }, function () {
+          try {
+            localStorage.removeItem(STORAGE_KEY);
+            LEGACY_KEYS.forEach(function (k) { safeRemove(k); });
+          } catch (_) { /* ignore */ }
+          window.location.reload();
+        });
       });
     } catch (_) {
       // Last resort: replace the body with a plain message using DOM APIs

@@ -135,6 +135,33 @@
   </div>
 </div>
 
+<!-- Rename modal -->
+<div id="renameModal" class="modal hidden">
+  <div class="modal-content">
+    <h2>Rename list</h2>
+    <form id="renameForm">
+      <label class="modal-label" for="renameInput">New name</label>
+      <input id="renameInput" type="text" required maxlength="60" autocomplete="off">
+      <div class="modal-buttons">
+        <button type="button" id="renameCancelBtn" class="secondary-btn">Cancel</button>
+        <button type="submit" class="primary-btn">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Reusable confirm dialog -->
+<div id="confirmModal" class="modal hidden">
+  <div class="modal-content">
+    <h2 id="confirmTitle">Are you sure?</h2>
+    <p id="confirmMessage" class="confirm-message"></p>
+    <div class="modal-buttons">
+      <button type="button" id="confirmCancelBtn" class="secondary-btn">Cancel</button>
+      <button type="button" id="confirmOkBtn" class="primary-btn">Confirm</button>
+    </div>
+  </div>
+</div>
+
 <!-- Error boundary: if the app fails to initialize, show a recovery UI -->
 <div id="crashBoundary" class="crash-boundary hidden">
   <div class="crash-content">
