@@ -1,12 +1,14 @@
-# ParentPrep
+# Packing for Parents
 
 A dead-simple packing list web app for parents. Installs to any phone's home screen, works offline, no accounts.
+
+Live at **[packingforparents.com](https://packingforparents.com)** (once deployed).
 
 ## What it is
 
 A Progressive Web App (PWA) — a website that installs like an app. Users visit a URL, tap "Add to Home Screen," and it behaves like a native app. No App Store, no Play Store, no permissions prompts, no sign-ups.
 
-Pre-built templates cover the four baby age stages (0mo, 3mo, 6mo, 12mo) across two trip types: quick local trips (store / under 1hr drive) and long trips (5hr+ drive or flight). Users can tweak templates or create their own lists. Data saves locally on the user's phone.
+Four curated trip templates (short trip, short overnight, long trip, Ruth's list for extended stays) plus a guided wizard that builds a personalized list from four questions. Users can customize any list with their own items. Everything saves locally on the user's phone.
 
 ## Files
 
@@ -14,8 +16,10 @@ Pre-built templates cover the four baby age stages (0mo, 3mo, 6mo, 12mo) across 
 |---|---|
 | `index.html` | App shell |
 | `styles.css` | Mobile-first styles |
-| `app.js` | List logic + localStorage persistence |
-| `templates.js` | Pre-built parenting packing templates — edit freely |
+| `app.js` | List logic, localStorage, error boundary |
+| `templates.js` | The four curated trip templates — edit freely |
+| `wizard.js` | The "Build me a list" wizard catalog and generator |
+| `sw-register.js` | Service worker registration |
 | `manifest.json` | PWA manifest (install-to-home-screen metadata) |
 | `sw.js` | Service worker (offline cache) |
 | `icon.svg`, `icon.png`, `icon-192.png`, `icon-512.png` | App icons |

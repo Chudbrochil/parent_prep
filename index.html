@@ -11,17 +11,17 @@
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="ParentPrep">
+<meta name="apple-mobile-web-app-title" content="Packing for Parents">
 <meta name="description" content="Pack smarter. Curated packing lists for trips with baby.">
 
 <!-- Open Graph (nice previews when shared in messaging apps) -->
-<meta property="og:title" content="ParentPrep">
+<meta property="og:title" content="Packing for Parents">
 <meta property="og:description" content="Pack smarter. Curated packing lists for trips with baby.">
 <meta property="og:image" content="https://packingforparents.com/icon-512.png">
 <meta property="og:url" content="https://packingforparents.com/">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="ParentPrep">
+<meta name="twitter:title" content="Packing for Parents">
 <meta name="twitter:description" content="Pack smarter. Curated packing lists for trips with baby.">
 
 <link rel="manifest" href="manifest.json">
@@ -33,7 +33,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-<title>ParentPrep — Packing Lists for Parents</title>
+<title>Packing for Parents — Lists for Trips with Baby</title>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body class="on-home">
@@ -44,7 +44,7 @@
   </button>
   <div class="brand">
     <span class="brand-icon" aria-hidden="true">🧳</span>
-    <h1 id="headerTitle" class="brand-name">ParentPrep</h1>
+    <h1 id="headerTitle" class="brand-name">Packing for Parents</h1>
   </div>
   <button id="menuBtn" class="icon-btn hidden" aria-label="Menu">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
@@ -55,11 +55,40 @@
 
   <!-- HOME -->
   <section id="homeScreen" class="screen">
+    <!-- iOS install banner (dismissable, shows once) -->
+    <div id="iosBanner" class="ios-banner hidden">
+      <div class="ios-banner-icon" aria-hidden="true">📲</div>
+      <div class="ios-banner-text">
+        <div class="ios-banner-title">Install on your iPhone</div>
+        <div class="ios-banner-sub">Tap <strong>Share</strong> then <strong>Add to Home Screen</strong> to install. Your lists will stay safe.</div>
+      </div>
+      <button type="button" id="iosBannerDismiss" class="ios-banner-close" aria-label="Dismiss">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
     <div class="hero">
       <h2 class="hero-title">What are you packing for?</h2>
       <p class="hero-sub">Tap a trip. Check things off. Everything saves automatically on your phone.</p>
     </div>
     <div id="scenarioContainer"></div>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <div class="app-footer-row">
+        <button type="button" id="feedbackBtn" class="footer-link">Send feedback</button>
+        <span class="footer-sep" aria-hidden="true">·</span>
+        <a class="footer-link" href="https://github.com/Chudbrochil/parent_prep/issues/new" target="_blank" rel="noopener noreferrer">Report a bug</a>
+        <span class="footer-sep" aria-hidden="true">·</span>
+        <button type="button" id="exportBtn" class="footer-link">Export</button>
+        <span class="footer-sep" aria-hidden="true">·</span>
+        <button type="button" id="importBtn" class="footer-link">Import</button>
+      </div>
+      <div class="app-footer-meta">
+        <span>Packing for Parents · <span id="versionLabel">v1.0.0</span></span>
+      </div>
+    </footer>
+    <input id="importFileInput" type="file" accept="application/json,.json" class="hidden">
   </section>
 
   <!-- LIST DETAIL -->
@@ -157,11 +186,42 @@
   </div>
 </div>
 
+<!-- Feedback modal (Netlify Forms backed) -->
+<div id="feedbackModal" class="modal hidden">
+  <div class="modal-content">
+    <h2>Send feedback</h2>
+    <p class="confirm-message">Found a bug? Have an idea? Missing items on a list? Let me know — I'm the solo maintainer and I read every message.</p>
+    <form id="feedbackForm" name="feedback" method="POST" data-netlify="true" netlify-honeypot="bot-field">
+      <input type="hidden" name="form-name" value="feedback">
+      <p class="hidden"><label>Don't fill this out: <input name="bot-field"></label></p>
+      <label class="modal-label" for="feedbackName">Your name (optional)</label>
+      <input id="feedbackName" name="name" type="text" maxlength="60" autocomplete="name">
+      <label class="modal-label" for="feedbackEmail">Email (optional, only if you want a reply)</label>
+      <input id="feedbackEmail" name="email" type="email" maxlength="120" autocomplete="email">
+      <label class="modal-label" for="feedbackMessage">What's on your mind?</label>
+      <textarea id="feedbackMessage" name="message" rows="5" maxlength="2000" required placeholder="Tell me anything — bugs, requests, compliments, complaints…"></textarea>
+      <div class="modal-buttons">
+        <button type="button" id="feedbackCancelBtn" class="secondary-btn">Cancel</button>
+        <button type="submit" class="primary-btn">Send</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- All-packed celebration overlay -->
+<div id="celebration" class="celebration hidden" aria-hidden="true">
+  <div class="celebration-content">
+    <div class="celebration-emoji">🎉</div>
+    <div class="celebration-title">All packed!</div>
+    <div class="celebration-sub">Have a great trip.</div>
+  </div>
+</div>
+
 <!-- Error boundary: if the app fails to initialize, show a recovery UI -->
 <div id="crashBoundary" class="crash-boundary hidden">
   <div class="crash-content">
     <h2>Something went wrong</h2>
-    <p>ParentPrep hit an error while starting up. You can try reloading, or clear your stored data and start fresh if the problem persists.</p>
+    <p>Packing for Parents hit an error while starting up. You can try reloading, or clear your stored data and start fresh if the problem persists.</p>
     <div class="crash-buttons">
       <button type="button" id="crashReload" class="primary-btn">Reload</button>
       <button type="button" id="crashReset" class="secondary-btn">Clear data and restart</button>

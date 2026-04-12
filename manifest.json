@@ -1,6 +1,6 @@
 {
-  "name": "ParentPrep",
-  "short_name": "ParentPrep",
+  "name": "Packing for Parents",
+  "short_name": "Packing",
   "description": "Packing and travel lists for busy parents.",
   "start_url": "./index.html",
   "scope": "./",

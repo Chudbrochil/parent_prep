@@ -1,4 +1,4 @@
-// ParentPrep — categorized packing lists with localStorage persistence.
+// Packing for Parents — categorized packing lists with localStorage persistence.
 //
 // Storage shape (wrapped in an envelope so we can migrate safely):
 //   { version: <int>, lists: { [listId]: { categories: [{name, items: [{text, checked}]}], isCustom?, name?, emoji?, description? } } }
@@ -10,12 +10,14 @@
 
   // --- Constants -----------------------------------------------------
 
+  const APP_NAME = "Packing for Parents";
+  const APP_VERSION = "1.0.0";
   const STORAGE_KEY = "parentprep.lists";
   const SCHEMA_VERSION = 1;
   const LEGACY_KEYS = ["parentprep.v5", "parentprep.v4", "parentprep.v3", "parentprep.v2", "parentprep.lists.v1"];
+  const IOS_BANNER_DISMISSED_KEY = "parentprep.iosBannerDismissed";
 
   const CUSTOM_CATEGORY = "My additions";
-  const CUSTOM_DEFAULT_CATEGORY = "My items";
 
   const MAX_ITEM_TEXT_LENGTH = 200;
   const MAX_LIST_NAME_LENGTH = 60;
@@ -335,7 +337,7 @@
     homeScreen.classList.remove("hidden");
     backBtn.classList.add("hidden");
     menuBtn.classList.add("hidden");
-    headerTitle.textContent = "ParentPrep";
+    headerTitle.textContent = APP_NAME;
     document.body.classList.add("on-home");
     document.body.classList.remove("on-list");
     renderHome();
@@ -554,6 +556,8 @@
     } else {
       progressText.textContent = done + " of " + total + " packed";
     }
+
+    maybeCelebrate(list);
   }
 
   // --- Add item ------------------------------------------------------
@@ -783,11 +787,207 @@
     showList(id);
   }
 
+  // --- Celebration ---------------------------------------------------
+
+  const celebrationEl = document.getElementById("celebration");
+  let celebrationShownForList = null;
+
+  function maybeCelebrate(list) {
+    if (!list || !celebrationEl) return;
+    const counts = getCounts(list);
+    if (counts.total > 0 && counts.done === counts.total) {
+      // Only fire once per reach-complete (reset when uncheck happens)
+      if (celebrationShownForList === state.activeListId) return;
+      celebrationShownForList = state.activeListId;
+      celebrationEl.classList.remove("hidden");
+      celebrationEl.setAttribute("aria-hidden", "false");
+      setTimeout(function () {
+        celebrationEl.classList.add("hidden");
+        celebrationEl.setAttribute("aria-hidden", "true");
+      }, 2400);
+    } else if (counts.done < counts.total) {
+      // If they unchecked something, reset the shown-state so it fires again
+      if (celebrationShownForList === state.activeListId) {
+        celebrationShownForList = null;
+      }
+    }
+  }
+
+  // --- Feedback modal ------------------------------------------------
+
+  const feedbackBtn = document.getElementById("feedbackBtn");
+  const feedbackModal = document.getElementById("feedbackModal");
+  const feedbackForm = document.getElementById("feedbackForm");
+  const feedbackCancelBtn = document.getElementById("feedbackCancelBtn");
+  const feedbackMessageInput = document.getElementById("feedbackMessage");
+
+  if (feedbackBtn) {
+    feedbackBtn.addEventListener("click", function () {
+      feedbackModal.classList.remove("hidden");
+      setTimeout(function () { feedbackMessageInput.focus(); }, 100);
+    });
+  }
+
+  if (feedbackCancelBtn) {
+    feedbackCancelBtn.addEventListener("click", function () {
+      feedbackModal.classList.add("hidden");
+    });
+  }
+
+  if (feedbackModal) {
+    feedbackModal.addEventListener("click", function (e) {
+      if (e.target === feedbackModal) feedbackModal.classList.add("hidden");
+    });
+  }
+
+  if (feedbackForm) {
+    feedbackForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      // POST to Netlify's form endpoint (same URL as the page)
+      const formData = new FormData(feedbackForm);
+      const body = new URLSearchParams();
+      formData.forEach(function (value, key) { body.append(key, value); });
+
+      const submitBtn = feedbackForm.querySelector('button[type="submit"]');
+      if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Sending…"; }
+
+      fetch("/", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: body.toString(),
+      }).then(function () {
+        feedbackForm.reset();
+        feedbackModal.classList.add("hidden");
+        showToast("Thanks — message sent!");
+      }).catch(function () {
+        showToast("Couldn't send. Please try again.");
+      }).finally(function () {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "Send"; }
+      });
+    });
+  }
+
+  function showToast(message) {
+    const toast = document.createElement("div");
+    toast.className = "storage-warning";
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(function () { toast.classList.add("fading"); }, 2200);
+    setTimeout(function () { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 3000);
+  }
+
+  // --- Export / Import ----------------------------------------------
+
+  const exportBtn = document.getElementById("exportBtn");
+  const importBtn = document.getElementById("importBtn");
+  const importFileInput = document.getElementById("importFileInput");
+
+  if (exportBtn) {
+    exportBtn.addEventListener("click", function () {
+      const payload = {
+        app: APP_NAME,
+        version: APP_VERSION,
+        exportedAt: new Date().toISOString(),
+        schema: SCHEMA_VERSION,
+        lists: state.lists,
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "packing-for-parents-" + new Date().toISOString().slice(0, 10) + ".json";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast("Lists exported");
+    });
+  }
+
+  if (importBtn && importFileInput) {
+    importBtn.addEventListener("click", function () {
+      importFileInput.value = "";
+      importFileInput.click();
+    });
+
+    importFileInput.addEventListener("change", function () {
+      const file = importFileInput.files && importFileInput.files[0];
+      if (!file) return;
+      if (file.size > 5 * 1024 * 1024) {
+        showToast("File too large (max 5MB)");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (!parsed || typeof parsed !== "object" || !parsed.lists) {
+            showToast("That doesn't look like a Packing for Parents export");
+            return;
+          }
+          showConfirmDialog({
+            title: "Import these lists?",
+            message: "This will merge the imported lists with your existing ones. Lists with matching IDs will be overwritten.",
+            confirmText: "Import",
+          }, function () {
+            Object.keys(parsed.lists).forEach(function (id) {
+              state.lists[id] = parsed.lists[id];
+            });
+            save();
+            renderHome();
+            showToast("Lists imported");
+          });
+        } catch (err) {
+          showToast("Couldn't read that file");
+        }
+      };
+      reader.readAsText(file);
+    });
+  }
+
+  // --- Version label -------------------------------------------------
+
+  const versionLabel = document.getElementById("versionLabel");
+  if (versionLabel) versionLabel.textContent = "v" + APP_VERSION;
+
+  // --- iOS install banner -------------------------------------------
+
+  const iosBanner = document.getElementById("iosBanner");
+  const iosBannerDismiss = document.getElementById("iosBannerDismiss");
+
+  function isIOSSafari() {
+    const ua = window.navigator.userAgent;
+    const iOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+    const webkit = /WebKit/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua);
+    return iOS && webkit;
+  }
+
+  function isStandalone() {
+    return (
+      window.matchMedia && window.matchMedia("(display-mode: standalone)").matches
+    ) || window.navigator.standalone === true;
+  }
+
+  function maybeShowIOSBanner() {
+    if (!iosBanner) return;
+    if (!isIOSSafari()) return;
+    if (isStandalone()) return;
+    if (safeGet(IOS_BANNER_DISMISSED_KEY)) return;
+    iosBanner.classList.remove("hidden");
+  }
+
+  if (iosBannerDismiss) {
+    iosBannerDismiss.addEventListener("click", function () {
+      iosBanner.classList.add("hidden");
+      safeSet(IOS_BANNER_DISMISSED_KEY, "1");
+    });
+  }
+
   // --- Error boundary ------------------------------------------------
 
   function showCrashBoundary(err) {
     try {
-      console.error("ParentPrep crashed:", err);
+      console.error("Packing for Parents crashed:", err);
       const boundary = document.getElementById("crashBoundary");
       if (!boundary) return;
       boundary.classList.remove("hidden");
@@ -819,7 +1019,7 @@
         fallback.style.textAlign = "center";
         fallback.style.fontFamily = "sans-serif";
         const h = document.createElement("h2");
-        h.textContent = "ParentPrep failed to start";
+        h.textContent = "Packing for Parents failed to start";
         const p = document.createElement("p");
         p.textContent = "Please reload the page.";
         fallback.appendChild(h);
@@ -837,6 +1037,7 @@
   try {
     load();
     showHome();
+    maybeShowIOSBanner();
   } catch (err) {
     showCrashBoundary(err);
   }
