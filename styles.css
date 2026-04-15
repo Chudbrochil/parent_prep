@@ -1174,54 +1174,61 @@ main {
   margin: 0;
 }
 
-/* ======================== IMPORT PREVIEW ======================== */
+/* ======================== PREVIEW BANNER ======================== */
+/* Shown at the top of the list screen when the user is viewing a
+   shared list that they haven't saved yet. Holds the primary
+   "Save to my lists" action. */
 
-.import-preview {
+.preview-banner {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 14px 16px;
-  margin: 14px 0 4px 0;
+  padding: 16px 18px;
+  margin-bottom: 18px;
   background: var(--accent-softer);
   border: 1.5px solid var(--accent-light);
-  border-radius: 14px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  animation: slideDownIn 0.35s var(--ease);
 }
 
-.import-preview-icon {
-  width: 48px;
-  height: 48px;
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 28px;
-  background: var(--card);
-  border-radius: 12px;
-}
-
-.import-preview-text {
+.preview-banner-text {
   flex: 1;
   min-width: 0;
 }
 
-.import-preview-name {
-  font-size: 16px;
+.preview-banner-title {
+  font-size: 15px;
   font-weight: 700;
-  color: var(--ink);
-  margin-bottom: 3px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.import-preview-meta {
-  font-size: 13px;
-  color: var(--ink-soft);
-}
-
-.import-preview-meta strong {
   color: var(--accent-dark);
-  font-weight: 700;
+  margin-bottom: 2px;
+  letter-spacing: -0.01em;
+}
+
+.preview-banner-sub {
+  font-size: 13px;
+  color: var(--ink);
+  line-height: 1.4;
+}
+
+.preview-banner .primary-btn {
+  flex-shrink: 0;
+  padding: 12px 18px;
+  min-height: 42px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  .preview-banner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    text-align: left;
+  }
+  .preview-banner .primary-btn {
+    width: 100%;
+  }
 }
 
 /* ======================== WIZARD (full-screen) ======================== */

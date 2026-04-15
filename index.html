@@ -93,6 +93,17 @@
 
   <!-- LIST DETAIL -->
   <section id="listScreen" class="screen hidden">
+    <!-- Preview banner: only shown when viewing a shared list that the
+         user hasn't saved yet. Holds the primary "Save to my lists"
+         action. -->
+    <div id="previewBanner" class="preview-banner hidden">
+      <div class="preview-banner-text">
+        <div class="preview-banner-title">Previewing a shared list</div>
+        <div class="preview-banner-sub">Check things off, edit, then save it to keep it on your phone.</div>
+      </div>
+      <button type="button" id="previewSaveBtn" class="primary-btn">Save to my lists</button>
+    </div>
+
     <div class="list-header">
       <div class="progress-bar">
         <div id="progressFill" class="progress-fill"></div>
@@ -199,18 +210,6 @@
   </div>
 </div>
 
-<!-- Import modal: shown when the URL has a ?s=slug parameter -->
-<div id="importModal" class="modal hidden">
-  <div class="modal-content">
-    <h2 id="importTitle">Someone shared a list with you</h2>
-    <p id="importMessage" class="confirm-message">Add it to your lists so you can use it on this device?</p>
-    <div id="importPreview" class="import-preview"></div>
-    <div class="modal-buttons">
-      <button type="button" id="importCancelBtn" class="secondary-btn">Not now</button>
-      <button type="button" id="importConfirmBtn" class="primary-btn">Add to my lists</button>
-    </div>
-  </div>
-</div>
 
 <!-- Reusable confirm dialog -->
 <div id="confirmModal" class="modal hidden">

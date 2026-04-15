@@ -11,13 +11,19 @@
   // --- Constants -----------------------------------------------------
 
   const APP_NAME = "Packing for Parents";
-  const APP_VERSION = "1.1.0";
+  const APP_VERSION = "1.1.1";
   const STORAGE_KEY = "parentprep.lists";
   const SCHEMA_VERSION = 1;
   const LEGACY_KEYS = ["parentprep.v5", "parentprep.v4", "parentprep.v3", "parentprep.v2", "parentprep.lists.v1"];
   const IOS_BANNER_DISMISSED_KEY = "parentprep.iosBannerDismissed";
 
   const CUSTOM_CATEGORY = "My additions";
+
+  // Special list ID for the ephemeral "preview" list when someone visits
+  // a share URL. Lives in state.lists for rendering/editing convenience
+  // but is excluded from localStorage writes so it doesn't persist
+  // across reloads.
+  const PREVIEW_LIST_ID = "__preview__";
 
   const MAX_ITEM_TEXT_LENGTH = 200;
   const MAX_LIST_NAME_LENGTH = 60;
@@ -152,7 +158,16 @@
   }
 
   function save() {
-    const envelope = { version: SCHEMA_VERSION, lists: state.lists };
+    // Exclude the preview list from storage — it's ephemeral by design.
+    // The user explicitly saves it via the "Save to my lists" button,
+    // at which point it's cloned to a real custom list ID.
+    const lists = {};
+    Object.keys(state.lists).forEach(function (id) {
+      if (id === PREVIEW_LIST_ID) return;
+      if (state.lists[id] && state.lists[id].isPreview) return;
+      lists[id] = state.lists[id];
+    });
+    const envelope = { version: SCHEMA_VERSION, lists: lists };
     safeSet(STORAGE_KEY, JSON.stringify(envelope));
   }
 
@@ -264,12 +279,8 @@
   const shareCloseBtn = document.getElementById("shareCloseBtn");
   const shareLoadingModal = document.getElementById("shareLoadingModal");
   const shareLoadingText = document.getElementById("shareLoadingText");
-  const importModal = document.getElementById("importModal");
-  const importTitle = document.getElementById("importTitle");
-  const importMessage = document.getElementById("importMessage");
-  const importPreview = document.getElementById("importPreview");
-  const importCancelBtn = document.getElementById("importCancelBtn");
-  const importConfirmBtn = document.getElementById("importConfirmBtn");
+  const previewBanner = document.getElementById("previewBanner");
+  const previewSaveBtn = document.getElementById("previewSaveBtn");
   const wizardScreen = document.getElementById("wizardScreen");
   const wizardProgress = document.getElementById("wizardProgress");
   const wizardQuestion = document.getElementById("wizardQuestion");
@@ -345,6 +356,10 @@
   // --- Navigation ----------------------------------------------------
 
   function showHome() {
+    // Navigating home from a preview discards the preview silently.
+    if (state.lists[PREVIEW_LIST_ID]) {
+      delete state.lists[PREVIEW_LIST_ID];
+    }
     state.activeListId = null;
     if (typeof resetAddingState === "function") resetAddingState();
     listScreen.classList.add("hidden");
@@ -354,6 +369,8 @@
     headerTitle.textContent = APP_NAME;
     document.body.classList.add("on-home");
     document.body.classList.remove("on-list");
+    document.body.classList.remove("previewing-shared");
+    if (previewBanner) previewBanner.classList.add("hidden");
     renderHome();
   }
 
@@ -366,7 +383,21 @@
     homeScreen.classList.add("hidden");
     listScreen.classList.remove("hidden");
     backBtn.classList.remove("hidden");
-    menuBtn.classList.remove("hidden");
+
+    // Preview mode: hide the list menu, show the preview banner.
+    // The banner holds the "Save to my lists" action, which is the
+    // only operation that matters in preview.
+    const isPreview = !!(state.lists[id] && state.lists[id].isPreview);
+    if (isPreview) {
+      menuBtn.classList.add("hidden");
+      document.body.classList.add("previewing-shared");
+      if (previewBanner) previewBanner.classList.remove("hidden");
+    } else {
+      menuBtn.classList.remove("hidden");
+      document.body.classList.remove("previewing-shared");
+      if (previewBanner) previewBanner.classList.add("hidden");
+    }
+
     headerTitle.textContent = meta.emoji + " " + meta.name;
     document.body.classList.add("on-list");
     document.body.classList.remove("on-home");
@@ -1364,8 +1395,6 @@
 
   // --- Share & import ------------------------------------------------
 
-  let pendingImportList = null;
-
   if (shareBtn) {
     shareBtn.addEventListener("click", function () {
       const list = state.lists[state.activeListId];
@@ -1468,16 +1497,48 @@
     });
   }
 
-  // --- Import flow ----------------------------------------------------
+  // --- Import / preview flow -----------------------------------------
+  //
+  // When the user lands on /s/:slug, we fetch the shared list and drop
+  // them directly into a "preview" view of it. The preview is a normal
+  // list (they can check items, edit, add) but lives under a reserved
+  // list ID (PREVIEW_LIST_ID) and is excluded from storage writes, so
+  // it disappears when they navigate home. A banner at the top offers
+  // "Save to my lists" which clones the preview to a real custom list.
+
+  // Pure slug-extraction helper, also useful for tests.
+  // Tries pathname first (for /s/:slug rewrites), then ?s= fallback.
+  function parseSlugFromLocation(pathname, search) {
+    const SLUG_RE = /^[a-z]+-[a-z]+-[a-z]+$/;
+    if (pathname) {
+      const m = pathname.match(/^\/s\/([a-z]+-[a-z]+-[a-z]+)$/);
+      if (m && SLUG_RE.test(m[1])) return m[1];
+    }
+    if (search) {
+      try {
+        const params = new URLSearchParams(search);
+        const s = params.get("s");
+        if (s && SLUG_RE.test(s)) return s;
+      } catch (_) { /* ignore */ }
+    }
+    return null;
+  }
 
   function detectAndImportFromUrl() {
-    let slug = null;
-    try {
-      const params = new URLSearchParams(window.location.search);
-      slug = params.get("s");
-    } catch (e) { /* ignore */ }
+    const slug = parseSlugFromLocation(window.location.pathname, window.location.search);
     if (!slug) return;
-    if (!/^[a-z]+-[a-z]+-[a-z]+$/.test(slug)) return;
+
+    // If the user already saved a copy of this slug, jump to it.
+    const existingId = Object.keys(state.lists).find(function (id) {
+      const list = state.lists[id];
+      return list && list.importedFrom === slug && !list.isPreview;
+    });
+    if (existingId) {
+      cleanShareParamFromUrl();
+      showList(existingId);
+      showToast("You already have this shared list");
+      return;
+    }
 
     showShareLoading("Loading shared list…");
     fetch("/api/share-get?slug=" + encodeURIComponent(slug))
@@ -1490,7 +1551,7 @@
       .then(function (data) {
         hideShareLoading();
         if (!data || !data.list) throw new Error("missing list");
-        showImportModal(data.list, slug);
+        showPreviewList(data.list, slug);
       })
       .catch(function (err) {
         hideShareLoading();
@@ -1502,79 +1563,74 @@
         } else {
           showToast("Couldn't load the shared list");
         }
-        // Clean the URL either way so it doesn't keep popping
         cleanShareParamFromUrl();
       });
   }
 
-  function showImportModal(list, slug) {
-    pendingImportList = list;
-    const itemCount = (list.categories || []).reduce(function (n, c) {
-      return n + (c.items ? c.items.length : 0);
-    }, 0);
-    importTitle.textContent = "“" + (list.name || "Shared list") + "” was shared with you";
-    importMessage.textContent = "Add it to your lists on this device? Saves locally — nothing leaves your phone after import.";
-    importPreview.innerHTML =
-      '<div class="import-preview-icon">' + escapeHTML(list.emoji || "📋") + '</div>' +
-      '<div class="import-preview-text">' +
-        '<div class="import-preview-name">' + escapeHTML(list.name || "Shared list") + '</div>' +
-        '<div class="import-preview-meta">' + itemCount + ' item' + (itemCount === 1 ? '' : 's') + ' · code <strong>' + escapeHTML(slug) + '</strong></div>' +
-      '</div>';
-    importModal.classList.remove("hidden");
+  function showPreviewList(list, slug) {
+    // Stash the shared list under the reserved preview ID. The render
+    // loop treats it like any other list, but save() skips it so
+    // nothing persists until the user hits "Save to my lists".
+    state.lists[PREVIEW_LIST_ID] = {
+      isCustom: true,
+      isPreview: true,
+      importedFrom: slug,
+      name: clampText(list.name, MAX_LIST_NAME_LENGTH) || "Shared list",
+      emoji: typeof list.emoji === "string" ? list.emoji : "📋",
+      description: list.description || "Shared with you",
+      categories: (list.categories || []).map(function (c) {
+        return {
+          name: c.name,
+          items: (c.items || []).map(function (it) {
+            return { text: it.text, checked: false };
+          }),
+        };
+      }),
+    };
+    showList(PREVIEW_LIST_ID);
   }
 
-  function hideImportModal() {
-    importModal.classList.add("hidden");
-    pendingImportList = null;
+  function saveCurrentPreview() {
+    const preview = state.lists[PREVIEW_LIST_ID];
+    if (!preview || !preview.isPreview) return;
+
+    // Clone the preview to a real custom list ID
+    const newId = "custom-" + uid();
+    state.lists[newId] = {
+      isCustom: true,
+      name: preview.name,
+      emoji: preview.emoji,
+      description: preview.description,
+      importedFrom: preview.importedFrom,
+      categories: preview.categories.map(function (c) {
+        return {
+          name: c.name,
+          items: c.items.map(function (it) {
+            return { text: it.text, checked: !!it.checked };
+          }),
+        };
+      }),
+    };
+    delete state.lists[PREVIEW_LIST_ID];
+    save();
+    cleanShareParamFromUrl();
+    showList(newId);
+    showToast("Saved to your lists!");
+  }
+
+  if (previewSaveBtn) {
+    previewSaveBtn.addEventListener("click", saveCurrentPreview);
   }
 
   function cleanShareParamFromUrl() {
     try {
       const url = new URL(window.location.href);
       url.searchParams.delete("s");
-      // Also reset the path if it was /s/:slug rewritten by Netlify
       let newPath = url.pathname;
       if (/^\/s\/[a-z-]+$/.test(newPath)) newPath = "/";
       const cleanUrl = url.origin + newPath + (url.search || "");
       history.replaceState(null, "", cleanUrl);
     } catch (e) { /* ignore */ }
-  }
-
-  if (importCancelBtn) {
-    importCancelBtn.addEventListener("click", function () {
-      hideImportModal();
-      cleanShareParamFromUrl();
-    });
-  }
-  if (importConfirmBtn) {
-    importConfirmBtn.addEventListener("click", function () {
-      if (!pendingImportList) { hideImportModal(); return; }
-      const list = pendingImportList;
-      const id = "custom-" + uid();
-      state.lists[id] = {
-        isCustom: true,
-        name: clampText(list.name, MAX_LIST_NAME_LENGTH) || "Shared list",
-        emoji: list.emoji || "📋",
-        description: list.description || "Shared with you",
-        categories: list.categories.map(function (c) {
-          return {
-            name: c.name,
-            items: c.items.map(function (it) {
-              return { text: it.text, checked: false };  // start fresh, unchecked
-            }),
-          };
-        }),
-      };
-      save();
-      hideImportModal();
-      cleanShareParamFromUrl();
-      showList(id);
-    });
-  }
-  if (importModal) {
-    importModal.addEventListener("click", function (e) {
-      if (e.target === importModal) { hideImportModal(); cleanShareParamFromUrl(); }
-    });
   }
 
   // --- Error boundary ------------------------------------------------
