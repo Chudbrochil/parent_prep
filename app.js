@@ -479,6 +479,11 @@
   let addingToCategoryIdx = null;
   let shouldFocusAddInputAfterRender = false;
 
+  // Coordinates of the item currently being edited in place, or null.
+  // { catIdx, itemIdx }
+  let editingItemCoord = null;
+  let shouldFocusEditInputAfterRender = false;
+
   function renderList() {
     const list = state.lists[state.activeListId];
     if (!list) { showHome(); return; }
@@ -515,16 +520,30 @@
       sortedPairs.forEach(function (pair) {
         const item = pair.item;
         const itemIdx = pair.origIdx;
+        const isEditing = editingItemCoord
+          && editingItemCoord.catIdx === catIdx
+          && editingItemCoord.itemIdx === itemIdx;
+
         const li = document.createElement("li");
-        li.className = "item" + (item.checked ? " checked" : "");
+        li.className = "item" + (item.checked ? " checked" : "") + (isEditing ? " editing" : "");
+
+        // Checkbox is now wrapped in a 44px button so the hit area is
+        // touch-friendly even though the visual circle stays 24px.
+        // Label is its own click target — tapping it enters edit mode.
+        const labelInner = isEditing
+          ? '<input class="item-edit-input" type="text" maxlength="' + MAX_ITEM_TEXT_LENGTH + '">'
+          : '<div class="item-label">' + escapeHTML(item.text) + '</div>';
+
         li.innerHTML =
-          '<div class="item-checkbox" role="checkbox" aria-checked="' + (item.checked ? "true" : "false") + '" tabindex="0"></div>' +
-          '<div class="item-label">' + escapeHTML(item.text) + '</div>' +
+          '<button type="button" class="item-check" role="checkbox" aria-checked="' + (item.checked ? "true" : "false") + '" aria-label="Toggle packed">' +
+            '<span class="item-checkbox"></span>' +
+          '</button>' +
+          labelInner +
           '<button class="item-delete" aria-label="Delete item">' +
             '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>' +
           '</button>';
-        const checkbox = li.querySelector(".item-checkbox");
-        const label = li.querySelector(".item-label");
+
+        const checkBtn = li.querySelector(".item-check");
         const delBtn = li.querySelector(".item-delete");
 
         const toggle = function () {
@@ -533,18 +552,74 @@
           save();
           renderList();
         };
-        checkbox.addEventListener("click", toggle);
-        label.addEventListener("click", toggle);
-        checkbox.addEventListener("keydown", function (e) {
+        checkBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          toggle();
+        });
+        checkBtn.addEventListener("keydown", function (e) {
           if (e.key === " " || e.key === "Enter") { e.preventDefault(); toggle(); }
         });
 
         delBtn.addEventListener("click", function (e) {
           e.stopPropagation();
           list.categories[catIdx].items.splice(itemIdx, 1);
+          // If we deleted the item we were editing, clear the edit state
+          if (isEditing) editingItemCoord = null;
           save();
           renderList();
         });
+
+        if (isEditing) {
+          const editInput = li.querySelector(".item-edit-input");
+          editInput.value = item.text;
+
+          const saveEdit = function () {
+            const newText = clampText(editInput.value, MAX_ITEM_TEXT_LENGTH);
+            // Only save if there's actual text — otherwise treat as cancel
+            if (newText && newText !== item.text) {
+              list.categories[catIdx].items[itemIdx].text = newText;
+              save();
+            }
+            editingItemCoord = null;
+            renderList();
+          };
+
+          const cancelEdit = function () {
+            editingItemCoord = null;
+            renderList();
+          };
+
+          editInput.addEventListener("keydown", function (e) {
+            if (e.key === "Enter") { e.preventDefault(); saveEdit(); }
+            else if (e.key === "Escape") { e.preventDefault(); cancelEdit(); }
+          });
+          // Save on blur (tapping anywhere outside the input)
+          editInput.addEventListener("blur", function () {
+            // Defer slightly so an immediate click on something else is processed
+            // first (e.g., delete button click should still work)
+            setTimeout(function () {
+              if (editingItemCoord && editingItemCoord.catIdx === catIdx && editingItemCoord.itemIdx === itemIdx) {
+                saveEdit();
+              }
+            }, 100);
+          });
+
+          shouldFocusEditInputAfterRender = true;
+        } else {
+          // Tapping the label (not the checkbox, not the delete button)
+          // enters edit mode. Tapping the checkbox circle still toggles.
+          const label = li.querySelector(".item-label");
+          if (label) {
+            label.addEventListener("click", function (e) {
+              e.stopPropagation();
+              // Close any active add form before entering edit mode
+              addingToCategoryIdx = null;
+              editingItemCoord = { catIdx: catIdx, itemIdx: itemIdx };
+              shouldFocusEditInputAfterRender = true;
+              renderList();
+            });
+          }
+        }
 
         ul.appendChild(li);
       });
@@ -639,12 +714,26 @@
       }
     }
 
+    // Restore focus to the edit-input after a re-render and select all text
+    if (shouldFocusEditInputAfterRender && editingItemCoord) {
+      shouldFocusEditInputAfterRender = false;
+      const editInput = itemListEl.querySelector(".item.editing .item-edit-input");
+      if (editInput) {
+        setTimeout(function () { editInput.focus(); editInput.select(); }, 0);
+      }
+    }
+
     maybeCelebrate(list);
   }
 
-  // Reset the "adding" state whenever the user navigates away from a list
+  // Reset transient UI state whenever the user navigates away from a list
   // so stale state doesn't leak between lists.
-  function resetAddingState() { addingToCategoryIdx = null; shouldFocusAddInputAfterRender = false; }
+  function resetAddingState() {
+    addingToCategoryIdx = null;
+    shouldFocusAddInputAfterRender = false;
+    editingItemCoord = null;
+    shouldFocusEditInputAfterRender = false;
+  }
 
   // Adding items is now handled per-category inside renderList.
   // The old sticky bottom form is gone; users tap "+ Add item" under
