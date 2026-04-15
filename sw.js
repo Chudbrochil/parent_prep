@@ -1,5 +1,5 @@
 // Packing for Parents — service worker, minimal offline cache.
-const CACHE = "parentprep-v13";
+const CACHE = "parentprep-v14";
 const FILES = [
   "./",
   "./index.html",

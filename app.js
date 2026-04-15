@@ -252,6 +252,7 @@
   const newItemInput = document.getElementById("newItemInput");
   const listMenuModal = document.getElementById("listMenuModal");
   const uncheckAllBtn = document.getElementById("uncheckAllBtn");
+  const duplicateBtn = document.getElementById("duplicateBtn");
   const resetBtn = document.getElementById("resetBtn");
   const renameBtn = document.getElementById("renameBtn");
   const deleteBtn = document.getElementById("deleteBtn");
@@ -625,6 +626,39 @@
     save();
     renderList();
     listMenuModal.classList.add("hidden");
+  });
+
+  duplicateBtn.addEventListener("click", function () {
+    const list = state.lists[state.activeListId];
+    if (!list) return;
+    const meta = getListMeta(state.activeListId);
+    if (!meta) return;
+
+    // Deep clone categories + items so editing the copy doesn't touch the original
+    const clonedCategories = list.categories.map(function (cat) {
+      return {
+        name: cat.name,
+        items: cat.items.map(function (it) {
+          return { text: it.text, checked: !!it.checked };
+        }),
+      };
+    });
+
+    // Auto-name: "My <original name>", unless the name already starts with "My "
+    let newName = meta.name;
+    if (!/^my\s/i.test(newName)) newName = "My " + newName;
+
+    const newId = "custom-" + uid();
+    state.lists[newId] = {
+      isCustom: true,
+      name: newName,
+      emoji: meta.emoji || "📋",
+      description: meta.description || "Custom list",
+      categories: clonedCategories,
+    };
+    save();
+    listMenuModal.classList.add("hidden");
+    showList(newId);
   });
 
   resetBtn.addEventListener("click", function () {
