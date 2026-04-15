@@ -505,7 +505,20 @@
         const ul = document.createElement("ul");
         ul.className = "category-items";
 
-        cat.items.forEach(function (item, itemIdx) {
+        // Sort items for rendering: unchecked first, checked last.
+        // Stable within each group so items don't shuffle unexpectedly.
+        // Sort happens on every re-render (after any interaction), so
+        // checked items drop to the bottom naturally as you pack.
+        const sortedPairs = cat.items
+          .map(function (item, origIdx) { return { item: item, origIdx: origIdx }; })
+          .sort(function (a, b) {
+            if (a.item.checked !== b.item.checked) return a.item.checked ? 1 : -1;
+            return a.origIdx - b.origIdx;
+          });
+
+        sortedPairs.forEach(function (pair) {
+          const item = pair.item;
+          const itemIdx = pair.origIdx;
           const li = document.createElement("li");
           li.className = "item" + (item.checked ? " checked" : "");
           li.innerHTML =
