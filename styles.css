@@ -365,20 +365,180 @@ main {
   flex-direction: column;
 }
 
+/* Header row holds the title (or rename input) plus the delete button */
+.category-header-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px 0;
+  padding: 0 6px 6px 6px;
+  border-bottom: 1.5px solid var(--accent-soft);
+}
+
 .category-header {
+  flex: 1;
   font-size: 13px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--accent);
-  margin: 0 0 10px 6px;
-  padding-bottom: 6px;
-  border-bottom: 1.5px solid var(--accent-soft);
+  margin: 0;
+  padding: 6px 4px;
+  cursor: text;
+  border-radius: 6px;
+  transition: background 0.15s var(--ease);
+}
+
+.category-header:hover {
+  background: var(--accent-softer);
 }
 
 .item-category.is-custom .category-header {
   color: var(--ink-soft);
+}
+
+.item-category.is-custom .category-header-row {
   border-bottom-color: var(--border);
+}
+
+/* Inline rename input that replaces the header text when active */
+.category-rename-input {
+  flex: 1;
+  min-width: 0;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1.5px solid var(--accent);
+  border-radius: 8px;
+  background: var(--card);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+}
+
+.category-rename-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* Subtle trash button on the right of the category header */
+.category-delete-btn {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+  border-radius: 8px;
+  opacity: 0.5;
+  transition: opacity 0.15s var(--ease),
+              background 0.15s var(--ease),
+              color 0.15s var(--ease);
+}
+
+.category-delete-btn:hover {
+  opacity: 1;
+  color: var(--danger);
+  background: rgba(192, 57, 43, 0.06);
+}
+
+.category-delete-btn:active {
+  background: rgba(192, 57, 43, 0.12);
+}
+
+/* "+ New category" button at the bottom of the list */
+.new-category-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 56px;
+  padding: 14px;
+  margin-top: 24px;
+  background: transparent;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: background 0.15s var(--ease),
+              color 0.15s var(--ease),
+              border-color 0.15s var(--ease),
+              transform 0.1s var(--ease);
+}
+
+.new-category-btn:hover {
+  background: var(--accent-softer);
+  color: var(--accent);
+  border-color: var(--accent-light);
+}
+
+.new-category-btn:active {
+  transform: scale(0.99);
+}
+
+/* Inline form for creating a new category (replaces the button when active) */
+.new-category-form {
+  display: flex;
+  gap: 8px;
+  margin-top: 24px;
+  padding: 8px;
+  background: var(--accent-softer);
+  border: 1.5px solid var(--accent);
+  border-radius: var(--radius);
+  animation: addFormIn 0.2s var(--ease);
+}
+
+.new-category-form input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 12px 16px;
+  background: var(--card);
+  border: 1.5px solid var(--accent);
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.005em;
+}
+
+.new-category-form input::placeholder {
+  color: var(--ink-muted);
+}
+
+.new-category-form input:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.new-category-form button {
+  flex-shrink: 0;
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s var(--ease),
+              color 0.15s var(--ease),
+              transform 0.1s var(--ease);
 }
 
 .category-items {

@@ -1,6 +1,6 @@
 {
   "name": "packing-for-parents",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "Packing lists for new parents — a Progressive Web App.",
   "private": true,
   "type": "module",

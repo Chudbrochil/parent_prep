@@ -11,7 +11,7 @@
   // --- Constants -----------------------------------------------------
 
   const APP_NAME = "Packing for Parents";
-  const APP_VERSION = "1.0.2";
+  const APP_VERSION = "1.1.0";
   const STORAGE_KEY = "parentprep.lists";
   const SCHEMA_VERSION = 1;
   const LEGACY_KEYS = ["parentprep.v5", "parentprep.v4", "parentprep.v3", "parentprep.v2", "parentprep.lists.v1"];
@@ -499,6 +499,14 @@
   let editingItemCoord = null;
   let shouldFocusEditInputAfterRender = false;
 
+  // Which category index is being renamed, or null.
+  let editingCategoryIdx = null;
+  let shouldFocusCategoryRenameAfterRender = false;
+
+  // Whether the "+ New category" inline form is open.
+  let addingNewCategory = false;
+  let shouldFocusNewCategoryAfterRender = false;
+
   function renderList() {
     const list = state.lists[state.activeListId];
     if (!list) { showHome(); return; }
@@ -513,10 +521,91 @@
       if (cat.name === CUSTOM_CATEGORY) section.classList.add("is-custom");
       section.setAttribute("data-cat-idx", String(catIdx));
 
-      const header = document.createElement("h3");
-      header.className = "category-header";
-      header.textContent = cat.name;
-      section.appendChild(header);
+      // Header row: category name (tap to rename) + small delete button
+      const headerRow = document.createElement("div");
+      headerRow.className = "category-header-row";
+
+      const isRenamingCat = editingCategoryIdx === catIdx;
+      if (isRenamingCat) {
+        const renameInput = document.createElement("input");
+        renameInput.type = "text";
+        renameInput.className = "category-rename-input";
+        renameInput.maxLength = 60;
+        renameInput.value = cat.name;
+        const saveCatRename = function () {
+          const newName = clampText(renameInput.value, 60);
+          if (newName && newName !== cat.name) {
+            list.categories[catIdx].name = newName;
+            save();
+          }
+          editingCategoryIdx = null;
+          renderList();
+        };
+        const cancelCatRename = function () {
+          editingCategoryIdx = null;
+          renderList();
+        };
+        renameInput.addEventListener("keydown", function (e) {
+          if (e.key === "Enter") { e.preventDefault(); saveCatRename(); }
+          else if (e.key === "Escape") { e.preventDefault(); cancelCatRename(); }
+        });
+        renameInput.addEventListener("blur", function () {
+          setTimeout(function () {
+            if (editingCategoryIdx === catIdx) saveCatRename();
+          }, 100);
+        });
+        headerRow.appendChild(renameInput);
+        shouldFocusCategoryRenameAfterRender = true;
+      } else {
+        const header = document.createElement("h3");
+        header.className = "category-header";
+        header.textContent = cat.name;
+        header.title = "Tap to rename";
+        header.addEventListener("click", function () {
+          // Close any other open editors
+          addingToCategoryIdx = null;
+          editingItemCoord = null;
+          addingNewCategory = false;
+          editingCategoryIdx = catIdx;
+          shouldFocusCategoryRenameAfterRender = true;
+          renderList();
+        });
+        headerRow.appendChild(header);
+
+        const deleteCatBtn = document.createElement("button");
+        deleteCatBtn.type = "button";
+        deleteCatBtn.className = "category-delete-btn";
+        deleteCatBtn.setAttribute("aria-label", "Delete category " + cat.name);
+        deleteCatBtn.title = "Delete category";
+        deleteCatBtn.innerHTML =
+          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">' +
+          '<path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>' +
+          '<line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>' +
+          '</svg>';
+        deleteCatBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          const itemCount = cat.items.length;
+          const messageItems = itemCount === 0
+            ? "This category is empty so nothing else will be lost."
+            : "All " + itemCount + " item" + (itemCount === 1 ? "" : "s") + " in it will be removed too.";
+          showConfirmDialog({
+            title: 'Delete "' + cat.name + '"?',
+            message: messageItems + " You can restore the original categories with Reset to defaults.",
+            confirmText: "Delete",
+            danger: true,
+          }, function () {
+            list.categories.splice(catIdx, 1);
+            // Clear any state that pointed at this index
+            if (addingToCategoryIdx === catIdx) addingToCategoryIdx = null;
+            if (editingItemCoord && editingItemCoord.catIdx === catIdx) editingItemCoord = null;
+            save();
+            renderList();
+          });
+        });
+        headerRow.appendChild(deleteCatBtn);
+      }
+
+      section.appendChild(headerRow);
 
       const ul = document.createElement("ul");
       ul.className = "category-items";
@@ -705,6 +794,70 @@
       itemListEl.appendChild(section);
     });
 
+    // "+ New category" affordance at the bottom of the list — either the
+    // pill button when inactive, or an inline form when adding.
+    if (addingNewCategory) {
+      const form = document.createElement("form");
+      form.className = "new-category-form";
+      form.innerHTML =
+        '<input type="text" placeholder="New category name…" autocomplete="off" required maxlength="60">' +
+        '<button type="submit" class="category-add-submit" aria-label="Create category">' +
+          '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>' +
+        '</button>' +
+        '<button type="button" class="category-add-cancel" aria-label="Cancel">' +
+          '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>' +
+        '</button>';
+      const newCatInput = form.querySelector("input");
+      const newCatCancel = form.querySelector(".category-add-cancel");
+
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        const name = clampText(newCatInput.value, 60);
+        if (!name) return;
+        list.categories.push({ name: name, items: [] });
+        save();
+        addingNewCategory = false;
+        // Auto-open the "+ Add item" form on the brand-new category so
+        // the user can populate it immediately.
+        addingToCategoryIdx = list.categories.length - 1;
+        shouldFocusAddInputAfterRender = true;
+        renderList();
+      });
+
+      newCatCancel.addEventListener("click", function () {
+        addingNewCategory = false;
+        renderList();
+      });
+
+      newCatInput.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          addingNewCategory = false;
+          renderList();
+        }
+      });
+
+      itemListEl.appendChild(form);
+      shouldFocusNewCategoryAfterRender = true;
+    } else {
+      const newCatBtn = document.createElement("button");
+      newCatBtn.type = "button";
+      newCatBtn.className = "new-category-btn";
+      newCatBtn.innerHTML =
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>' +
+        '<span>New category</span>';
+      newCatBtn.addEventListener("click", function () {
+        // Close any other inline editors first
+        addingToCategoryIdx = null;
+        editingItemCoord = null;
+        editingCategoryIdx = null;
+        addingNewCategory = true;
+        shouldFocusNewCategoryAfterRender = true;
+        renderList();
+      });
+      itemListEl.appendChild(newCatBtn);
+    }
+
     const counts = getCounts(list);
     const total = counts.total;
     const done = counts.done;
@@ -738,6 +891,24 @@
       }
     }
 
+    // Restore focus to the category-rename input after a re-render
+    if (shouldFocusCategoryRenameAfterRender && editingCategoryIdx !== null) {
+      shouldFocusCategoryRenameAfterRender = false;
+      const renameInput = itemListEl.querySelector(".category-rename-input");
+      if (renameInput) {
+        setTimeout(function () { renameInput.focus(); renameInput.select(); }, 0);
+      }
+    }
+
+    // Restore focus to the new-category input after a re-render
+    if (shouldFocusNewCategoryAfterRender && addingNewCategory) {
+      shouldFocusNewCategoryAfterRender = false;
+      const newCatInput = itemListEl.querySelector(".new-category-form input");
+      if (newCatInput) {
+        setTimeout(function () { newCatInput.focus(); }, 0);
+      }
+    }
+
     maybeCelebrate(list);
   }
 
@@ -748,6 +919,10 @@
     shouldFocusAddInputAfterRender = false;
     editingItemCoord = null;
     shouldFocusEditInputAfterRender = false;
+    editingCategoryIdx = null;
+    shouldFocusCategoryRenameAfterRender = false;
+    addingNewCategory = false;
+    shouldFocusNewCategoryAfterRender = false;
   }
 
   // Adding items is now handled per-category inside renderList.
