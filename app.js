@@ -11,7 +11,7 @@
   // --- Constants -----------------------------------------------------
 
   const APP_NAME = "Packing for Parents";
-  const APP_VERSION = "1.1.1";
+  const APP_VERSION = "1.1.2";
   const STORAGE_KEY = "parentprep.lists";
   const SCHEMA_VERSION = 1;
   const LEGACY_KEYS = ["parentprep.v5", "parentprep.v4", "parentprep.v3", "parentprep.v2", "parentprep.lists.v1"];
@@ -36,8 +36,6 @@
     activeListId: null,
   };
 
-  let storageError = false;
-
   // --- Safe storage --------------------------------------------------
 
   function safeGet(key) {
@@ -51,10 +49,8 @@
   function safeSet(key, value) {
     try {
       localStorage.setItem(key, value);
-      storageError = false;
       return true;
     } catch (e) {
-      storageError = true;
       showStorageWarning();
       return false;
     }
@@ -485,9 +481,12 @@
     });
     scenarioContainer.appendChild(templateGrid);
 
-    // Custom lists section
+    // Custom lists section (excluding the ephemeral preview list)
     const customEntries = Object.keys(state.lists)
-      .filter(function (id) { return state.lists[id] && state.lists[id].isCustom; })
+      .filter(function (id) {
+        const l = state.lists[id];
+        return l && l.isCustom && !l.isPreview && id !== PREVIEW_LIST_ID;
+      })
       .map(function (id) { return [id, state.lists[id]]; });
 
     if (customEntries.length > 0) {
@@ -716,17 +715,29 @@
 
           const saveEdit = function () {
             const newText = clampText(editInput.value, MAX_ITEM_TEXT_LENGTH);
-            // Only save if there's actual text — otherwise treat as cancel
             if (newText && newText !== item.text) {
               list.categories[catIdx].items[itemIdx].text = newText;
               save();
             }
-            editingItemCoord = null;
+            // Only clear editing state if we're still the active edit.
+            // If another handler has already moved focus to a different
+            // item, don't clobber its state — just leave editingItemCoord
+            // pointing at the new target.
+            if (editingItemCoord
+                && editingItemCoord.catIdx === catIdx
+                && editingItemCoord.itemIdx === itemIdx) {
+              editingItemCoord = null;
+            }
             renderList();
           };
 
           const cancelEdit = function () {
-            editingItemCoord = null;
+            // Cancel always clears our state (no save, no mutation)
+            if (editingItemCoord
+                && editingItemCoord.catIdx === catIdx
+                && editingItemCoord.itemIdx === itemIdx) {
+              editingItemCoord = null;
+            }
             renderList();
           };
 
@@ -734,15 +745,14 @@
             if (e.key === "Enter") { e.preventDefault(); saveEdit(); }
             else if (e.key === "Escape") { e.preventDefault(); cancelEdit(); }
           });
-          // Save on blur (tapping anywhere outside the input)
+          // Save on blur (tapping anywhere outside the input).
+          // Deferred via setTimeout so another click handler (e.g., a
+          // category delete) runs first. saveEdit is called regardless
+          // of whether we're still the active edit — saveEdit itself
+          // guards against clobbering state that's moved on, and the
+          // user's typed text should always persist.
           editInput.addEventListener("blur", function () {
-            // Defer slightly so an immediate click on something else is processed
-            // first (e.g., delete button click should still work)
-            setTimeout(function () {
-              if (editingItemCoord && editingItemCoord.catIdx === catIdx && editingItemCoord.itemIdx === itemIdx) {
-                saveEdit();
-              }
-            }, 100);
+            setTimeout(saveEdit, 100);
           });
 
           shouldFocusEditInputAfterRender = true;
@@ -1341,7 +1351,16 @@
             confirmText: "Import",
           }, function () {
             Object.keys(parsed.lists).forEach(function (id) {
-              state.lists[id] = parsed.lists[id];
+              // Never import the reserved preview slot — it's an
+              // in-memory ephemeral ID, not something a file should
+              // claim.
+              if (id === PREVIEW_LIST_ID) return;
+              const list = parsed.lists[id];
+              if (!list || typeof list !== "object") return;
+              // Strip ephemeral flags so the imported list becomes a
+              // normal persisted list.
+              if (list.isPreview) delete list.isPreview;
+              state.lists[id] = list;
             });
             save();
             renderHome();
