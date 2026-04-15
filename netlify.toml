@@ -8,6 +8,12 @@
 [build]
   publish = "."
 
+# Pin Node to match what we use locally and what Netlify Functions runs.
+# This lets Netlify cache the environment between builds, shaving setup
+# time off every deploy.
+[build.environment]
+  NODE_VERSION = "22"
+
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
