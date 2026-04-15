@@ -4,6 +4,32 @@
 # Functions live in netlify/functions/ and are exposed under /api/* via
 # the rewrites below. Pretty share URLs (/s/:slug) are also rewritten
 # to index.html so the SPA can pick up the slug from the query string.
+#
+# ----- Credit-cost reality check (Netlify free tier, 2026) -----
+# Netlify's billing changed from "build minutes" to a flat per-deploy
+# credit cost. As of April 2026:
+#
+#   * Production deploys: 15 credits each (flat, regardless of build time)
+#   * Branch deploys / deploy previews: 0 credits (FREE)
+#   * Compute (function execution): 10 credits per GB-hour
+#   * Bandwidth: 20 credits per GB
+#   * Web requests: 2 credits per 10,000
+#   * Form submissions: free
+#
+# The free tier is 300 credits/month → 20 production deploys/month.
+#
+# What this means for THIS repo:
+#   1. The lever is *deploy frequency*, not build speed. Faster builds
+#      (lockfile, Node pin) are nice for feedback loops but don't
+#      reduce credit cost.
+#   2. Batch commits before pushing — one push of 5 commits = 15 credits,
+#      five separate pushes of 1 commit each = 75 credits.
+#   3. Use [skip ci] or [skip netlify] in commit messages for changes
+#      that don't need a deploy (docs, tests, internal config tweaks).
+#   4. For heavy iteration weeks, work on a feature branch — branch
+#      deploys are FREE — and merge to main once when done.
+#
+# See TESTING.md and the README for the dev workflow.
 
 [build]
   publish = "."
