@@ -1,11 +1,12 @@
 {
   "name": "packing-for-parents",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Packing lists for new parents — a Progressive Web App.",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "python3 -m http.server 8000"
+    "dev": "python3 -m http.server 8000",
+    "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
     "@netlify/blobs": "^7.0.0"

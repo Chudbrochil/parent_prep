@@ -11,7 +11,7 @@
   // --- Constants -----------------------------------------------------
 
   const APP_NAME = "Packing for Parents";
-  const APP_VERSION = "1.0.1";
+  const APP_VERSION = "1.0.2";
   const STORAGE_KEY = "parentprep.lists";
   const SCHEMA_VERSION = 1;
   const LEGACY_KEYS = ["parentprep.v5", "parentprep.v4", "parentprep.v3", "parentprep.v2", "parentprep.lists.v1"];
