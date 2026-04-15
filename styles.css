@@ -494,71 +494,118 @@ main {
 .item-delete:hover { background: rgba(192, 57, 43, 0.08); color: var(--danger); opacity: 1; }
 .item-delete:active { background: rgba(192, 57, 43, 0.15); }
 
-/* ======================== ADD ITEM FORM ======================== */
+/* ======================== PER-CATEGORY ADD ITEM ======================== */
 
-.add-item-wrap {
-  position: sticky;
-  bottom: 0;
-  margin: 16px -16px -40px -16px;
-  padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0)) 16px;
-  background: linear-gradient(to bottom, rgba(250, 248, 243, 0), rgba(250, 248, 243, 0.92) 40%);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
-.add-item-form {
-  display: flex;
-  gap: 10px;
-  max-width: var(--max-width);
-  margin: 0 auto;
-}
-
-.add-item-form input {
-  flex: 1;
-  min-height: var(--tap);
-  padding: 12px 18px;
-  border: 1.5px solid var(--border);
-  border-radius: 14px;
-  background: var(--card);
+.category-add-btn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 14px;
+  margin-top: 8px;
+  background: transparent;
+  border: 1.5px dashed var(--border);
+  border-radius: 10px;
+  color: var(--ink-muted);
   font-family: inherit;
-  font-size: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  cursor: pointer;
+  transition: background 0.15s var(--ease),
+              color 0.15s var(--ease),
+              border-color 0.15s var(--ease),
+              transform 0.1s var(--ease);
+}
+
+.category-add-btn:hover {
+  background: var(--accent-softer);
+  color: var(--accent);
+  border-color: var(--accent-light);
+}
+
+.category-add-btn:active {
+  transform: scale(0.98);
+}
+
+.category-add-form {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 6px;
+  background: var(--accent-softer);
+  border: 1.5px solid var(--accent-light);
+  border-radius: 14px;
+  animation: addFormIn 0.2s var(--ease);
+}
+
+@keyframes addFormIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.category-add-form input {
+  flex: 1;
+  min-width: 0;
+  min-height: 42px;
+  padding: 10px 14px;
+  background: var(--card);
+  border: 1.5px solid var(--accent);
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 15px;
   font-weight: 500;
   color: var(--ink);
-  box-shadow: var(--shadow-sm);
-  transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
+  transition: box-shadow 0.15s var(--ease);
 }
 
-.add-item-form input::placeholder { color: var(--ink-muted); }
+.category-add-form input::placeholder {
+  color: var(--ink-muted);
+}
 
-.add-item-form input:focus {
+.category-add-form input:focus {
   outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 4px var(--accent-soft);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
-.add-item-form button {
-  width: var(--tap);
-  height: var(--tap);
+.category-add-form button {
+  flex-shrink: 0;
+  min-width: 42px;
+  min-height: 42px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s var(--ease),
+              color 0.15s var(--ease),
+              transform 0.1s var(--ease);
+}
+
+.category-add-submit {
   background: var(--accent);
   color: white;
-  border: none;
-  border-radius: 14px;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(79, 124, 95, 0.3);
-  transition: background 0.15s var(--ease), transform 0.1s var(--ease), box-shadow 0.15s var(--ease);
+  box-shadow: 0 2px 8px rgba(79, 124, 95, 0.25);
 }
 
-.add-item-form button:hover {
+.category-add-submit:hover {
   background: var(--accent-dark);
-  box-shadow: 0 6px 16px rgba(79, 124, 95, 0.4);
 }
 
-.add-item-form button:active {
+.category-add-submit:active {
   transform: scale(0.94);
-  box-shadow: 0 2px 8px rgba(79, 124, 95, 0.3);
+}
+
+.category-add-cancel {
+  background: transparent;
+  color: var(--ink-soft);
+}
+
+.category-add-cancel:hover {
+  background: rgba(31, 42, 35, 0.06);
+  color: var(--ink);
 }
 
 /* ======================== MODAL ======================== */

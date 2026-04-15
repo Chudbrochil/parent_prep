@@ -248,8 +248,6 @@
   const itemListEl = document.getElementById("itemList");
   const progressFill = document.getElementById("progressFill");
   const progressText = document.getElementById("progressText");
-  const addItemForm = document.getElementById("addItemForm");
-  const newItemInput = document.getElementById("newItemInput");
   const listMenuModal = document.getElementById("listMenuModal");
   const uncheckAllBtn = document.getElementById("uncheckAllBtn");
   const duplicateBtn = document.getElementById("duplicateBtn");
@@ -273,7 +271,6 @@
   const confirmCancelBtn = document.getElementById("confirmCancelBtn");
   const confirmOkBtn = document.getElementById("confirmOkBtn");
 
-  if (newItemInput) newItemInput.setAttribute("maxlength", String(MAX_ITEM_TEXT_LENGTH));
   if (renameInput) renameInput.setAttribute("maxlength", String(MAX_LIST_NAME_LENGTH));
 
   // --- Reusable modal helpers ----------------------------------------
@@ -334,6 +331,7 @@
 
   function showHome() {
     state.activeListId = null;
+    if (typeof resetAddingState === "function") resetAddingState();
     listScreen.classList.add("hidden");
     homeScreen.classList.remove("hidden");
     backBtn.classList.add("hidden");
@@ -349,6 +347,7 @@
     if (!meta) return;
     ensureList(id);
     state.activeListId = id;
+    if (typeof resetAddingState === "function") resetAddingState();
     homeScreen.classList.add("hidden");
     listScreen.classList.remove("hidden");
     backBtn.classList.remove("hidden");
@@ -475,89 +474,146 @@
 
   // --- List detail rendering -----------------------------------------
 
+  // Which category (by index) has its inline "add item" form open, or null.
+  // Only one can be open at a time — simpler on mobile and keeps the UI calm.
+  let addingToCategoryIdx = null;
+  let shouldFocusAddInputAfterRender = false;
+
   function renderList() {
     const list = state.lists[state.activeListId];
     if (!list) { showHome(); return; }
 
     itemListEl.innerHTML = "";
 
-    const anyItems = list.categories.some(function (c) { return c.items.length > 0; });
+    // Always render every category that exists on the list (even empty ones),
+    // so users can tap "+ Add item" to populate any category directly.
+    list.categories.forEach(function (cat, catIdx) {
+      const section = document.createElement("section");
+      section.className = "item-category";
+      if (cat.name === CUSTOM_CATEGORY) section.classList.add("is-custom");
+      section.setAttribute("data-cat-idx", String(catIdx));
 
-    if (!anyItems) {
-      const empty = document.createElement("div");
-      empty.className = "empty-state";
-      empty.innerHTML =
-        '<div class="empty-title">This list is empty</div>' +
-        '<div class="empty-sub">Add items using the form below</div>';
-      itemListEl.appendChild(empty);
-    } else {
-      list.categories.forEach(function (cat, catIdx) {
-        if (cat.items.length === 0) return;
+      const header = document.createElement("h3");
+      header.className = "category-header";
+      header.textContent = cat.name;
+      section.appendChild(header);
 
-        const section = document.createElement("section");
-        section.className = "item-category";
-        if (cat.name === CUSTOM_CATEGORY) section.classList.add("is-custom");
+      const ul = document.createElement("ul");
+      ul.className = "category-items";
 
-        const header = document.createElement("h3");
-        header.className = "category-header";
-        header.textContent = cat.name;
-        section.appendChild(header);
-
-        const ul = document.createElement("ul");
-        ul.className = "category-items";
-
-        // Sort items for rendering: unchecked first, checked last.
-        // Stable within each group so items don't shuffle unexpectedly.
-        // Sort happens on every re-render (after any interaction), so
-        // checked items drop to the bottom naturally as you pack.
-        const sortedPairs = cat.items
-          .map(function (item, origIdx) { return { item: item, origIdx: origIdx }; })
-          .sort(function (a, b) {
-            if (a.item.checked !== b.item.checked) return a.item.checked ? 1 : -1;
-            return a.origIdx - b.origIdx;
-          });
-
-        sortedPairs.forEach(function (pair) {
-          const item = pair.item;
-          const itemIdx = pair.origIdx;
-          const li = document.createElement("li");
-          li.className = "item" + (item.checked ? " checked" : "");
-          li.innerHTML =
-            '<div class="item-checkbox" role="checkbox" aria-checked="' + (item.checked ? "true" : "false") + '" tabindex="0"></div>' +
-            '<div class="item-label">' + escapeHTML(item.text) + '</div>' +
-            '<button class="item-delete" aria-label="Delete item">' +
-              '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>' +
-            '</button>';
-          const checkbox = li.querySelector(".item-checkbox");
-          const label = li.querySelector(".item-label");
-          const delBtn = li.querySelector(".item-delete");
-
-          const toggle = function () {
-            list.categories[catIdx].items[itemIdx].checked =
-              !list.categories[catIdx].items[itemIdx].checked;
-            save();
-            renderList();
-          };
-          checkbox.addEventListener("click", toggle);
-          label.addEventListener("click", toggle);
-          checkbox.addEventListener("keydown", function (e) {
-            if (e.key === " " || e.key === "Enter") { e.preventDefault(); toggle(); }
-          });
-
-          delBtn.addEventListener("click", function (e) {
-            e.stopPropagation();
-            list.categories[catIdx].items.splice(itemIdx, 1);
-            save();
-            renderList();
-          });
-
-          ul.appendChild(li);
+      // Sort items for rendering: unchecked first, checked last.
+      // Stable within each group so items don't shuffle unexpectedly.
+      // Sort happens on every re-render (after any interaction), so
+      // checked items drop to the bottom naturally as you pack.
+      const sortedPairs = cat.items
+        .map(function (item, origIdx) { return { item: item, origIdx: origIdx }; })
+        .sort(function (a, b) {
+          if (a.item.checked !== b.item.checked) return a.item.checked ? 1 : -1;
+          return a.origIdx - b.origIdx;
         });
 
-        section.appendChild(ul);
-        itemListEl.appendChild(section);
+      sortedPairs.forEach(function (pair) {
+        const item = pair.item;
+        const itemIdx = pair.origIdx;
+        const li = document.createElement("li");
+        li.className = "item" + (item.checked ? " checked" : "");
+        li.innerHTML =
+          '<div class="item-checkbox" role="checkbox" aria-checked="' + (item.checked ? "true" : "false") + '" tabindex="0"></div>' +
+          '<div class="item-label">' + escapeHTML(item.text) + '</div>' +
+          '<button class="item-delete" aria-label="Delete item">' +
+            '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>' +
+          '</button>';
+        const checkbox = li.querySelector(".item-checkbox");
+        const label = li.querySelector(".item-label");
+        const delBtn = li.querySelector(".item-delete");
+
+        const toggle = function () {
+          list.categories[catIdx].items[itemIdx].checked =
+            !list.categories[catIdx].items[itemIdx].checked;
+          save();
+          renderList();
+        };
+        checkbox.addEventListener("click", toggle);
+        label.addEventListener("click", toggle);
+        checkbox.addEventListener("keydown", function (e) {
+          if (e.key === " " || e.key === "Enter") { e.preventDefault(); toggle(); }
+        });
+
+        delBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          list.categories[catIdx].items.splice(itemIdx, 1);
+          save();
+          renderList();
+        });
+
+        ul.appendChild(li);
       });
-    }
+
+      section.appendChild(ul);
+
+      // Per-category add-item affordance: either the "+ Add item" button
+      // when inactive, or an inline form when this is the active category.
+      if (addingToCategoryIdx === catIdx) {
+        const form = document.createElement("form");
+        form.className = "category-add-form";
+        form.innerHTML =
+          '<input type="text" placeholder="Add an item to ' + escapeHTML(cat.name) + '…" autocomplete="off" required maxlength="' + MAX_ITEM_TEXT_LENGTH + '">' +
+          '<button type="submit" class="category-add-submit" aria-label="Add">' +
+            '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>' +
+          '</button>' +
+          '<button type="button" class="category-add-cancel" aria-label="Cancel">' +
+            '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>' +
+          '</button>';
+        const input = form.querySelector("input");
+        const cancel = form.querySelector(".category-add-cancel");
+
+        form.addEventListener("submit", function (e) {
+          e.preventDefault();
+          const text = clampText(input.value, MAX_ITEM_TEXT_LENGTH);
+          if (!text) return;
+          const targetCat = list.categories[catIdx];
+          if (targetCat.items.length >= MAX_ITEMS_PER_CATEGORY) {
+            showStorageWarning();
+            return;
+          }
+          targetCat.items.push({ text: text, checked: false });
+          save();
+          // Keep the form open for adding more — makes multi-add fast.
+          shouldFocusAddInputAfterRender = true;
+          renderList();
+        });
+
+        cancel.addEventListener("click", function () {
+          addingToCategoryIdx = null;
+          renderList();
+        });
+
+        input.addEventListener("keydown", function (e) {
+          if (e.key === "Escape") {
+            e.preventDefault();
+            addingToCategoryIdx = null;
+            renderList();
+          }
+        });
+
+        section.appendChild(form);
+      } else {
+        const addBtn = document.createElement("button");
+        addBtn.type = "button";
+        addBtn.className = "category-add-btn";
+        addBtn.innerHTML =
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>' +
+          '<span>Add item</span>';
+        addBtn.addEventListener("click", function () {
+          addingToCategoryIdx = catIdx;
+          shouldFocusAddInputAfterRender = true;
+          renderList();
+        });
+        section.appendChild(addBtn);
+      }
+
+      itemListEl.appendChild(section);
+    });
 
     const counts = getCounts(list);
     const total = counts.total;
@@ -571,37 +627,28 @@
       progressText.textContent = done + " of " + total + " packed";
     }
 
+    // Restore focus to the active add-input after a re-render
+    if (shouldFocusAddInputAfterRender && addingToCategoryIdx !== null) {
+      shouldFocusAddInputAfterRender = false;
+      const activeSection = itemListEl.querySelector('[data-cat-idx="' + addingToCategoryIdx + '"]');
+      if (activeSection) {
+        const input = activeSection.querySelector(".category-add-form input");
+        if (input) {
+          setTimeout(function () { input.focus(); }, 0);
+        }
+      }
+    }
+
     maybeCelebrate(list);
   }
 
-  // --- Add item ------------------------------------------------------
+  // Reset the "adding" state whenever the user navigates away from a list
+  // so stale state doesn't leak between lists.
+  function resetAddingState() { addingToCategoryIdx = null; shouldFocusAddInputAfterRender = false; }
 
-  addItemForm.addEventListener("submit", function (e) {
-    e.preventDefault();
-    const list = state.lists[state.activeListId];
-    if (!list) return;
-    const text = clampText(newItemInput.value, MAX_ITEM_TEXT_LENGTH);
-    if (!text) return;
-
-    // All user additions go into a lazily-created "My additions" category,
-    // for both template and custom lists. Keeps provenance clear and
-    // simplifies the add flow.
-    let targetCat = list.categories.find(function (c) { return c.name === CUSTOM_CATEGORY; });
-    if (!targetCat) {
-      targetCat = { name: CUSTOM_CATEGORY, items: [] };
-      list.categories.push(targetCat);
-    }
-
-    if (targetCat.items.length >= MAX_ITEMS_PER_CATEGORY) {
-      showStorageWarning();
-      return;
-    }
-
-    targetCat.items.push({ text: text, checked: false });
-    save();
-    newItemInput.value = "";
-    renderList();
-  });
+  // Adding items is now handled per-category inside renderList.
+  // The old sticky bottom form is gone; users tap "+ Add item" under
+  // the specific category where the item belongs.
 
   // --- List menu -----------------------------------------------------
 
