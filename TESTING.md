@@ -5,12 +5,15 @@ A short, opinionated test design for a small static PWA. The goal is **fast conf
 ## Quick start
 
 ```bash
+npm install   # one-time, installs jsdom (devDependency) for integration tests
 npm test
 ```
 
-Runs all tests under `tests/*.test.mjs` using Node's built-in test runner. Should finish in under a second.
+Runs all tests under `tests/*.test.mjs` using Node's built-in test runner. Should finish in under a second on a warm cache.
 
-No `npm install` needed for the tests themselves — they only use Node built-ins (`node:test`, `node:assert/strict`, `node:vm`, `node:fs`). The single dependency in `package.json` (`@netlify/blobs`) is for the deployed Functions, not the tests.
+The unit tests (`sanitize`, `slug`, `wizard`) only use Node built-ins. The integration tests (`category`) use **jsdom** as a `devDependency`. jsdom is not deployed — Netlify's `NODE_ENV=production` build skips devDependencies, so adding jsdom adds nothing to your deploy artifact.
+
+The only runtime dependency in `package.json` (`@netlify/blobs`) is for the deployed Functions.
 
 ## Philosophy
 
@@ -38,13 +41,20 @@ This lines up with the "trophy" model: **lots of unit tests around pure logic, a
 
 ## What's covered today
 
-| File | What it tests |
-|---|---|
-| [`tests/sanitize.test.mjs`](tests/sanitize.test.mjs) | The `sanitizeList` function used by the share-create Function. Covers null/undefined input, missing fields, oversized fields, too-many-categories, dropping items with no text, prototype-pollution defense, length clamping. |
-| [`tests/slug.test.mjs`](tests/slug.test.mjs) | The slug word lists and `generateSlug()`. Verifies word lists are unique, lowercase ASCII, hyphen-free, that 1000 random slugs all match the validation regex, and that `SLUG_PATTERN` rejects path-traversal attempts and other bad input. |
-| [`tests/wizard.test.mjs`](tests/wizard.test.mjs) | The wizard's `generateListSpec()` exhaustively across all 240 answer combinations. Verifies no duplicates, exactly one quantity-variant per group (key dedup), essential categories always present, infants flying always have a birth certificate, solid-food items only appear at 6mo+, pack-and-play only appears for extended/multi-night stays at someone else's house, and that names always include the possessive descriptor. |
+| File | Tier | What it tests |
+|---|---|---|
+| [`tests/sanitize.test.mjs`](tests/sanitize.test.mjs) | Pure unit | The `sanitizeList` function used by the share-create Function. Covers null/undefined input, missing fields, oversized fields, too-many-categories, dropping items with no text, prototype-pollution defense, length clamping. |
+| [`tests/slug.test.mjs`](tests/slug.test.mjs) | Pure unit | The slug word lists and `generateSlug()`. Verifies word lists are unique, lowercase ASCII, hyphen-free, that 1000 random slugs all match the validation regex, and that `SLUG_PATTERN` rejects path-traversal attempts and other bad input. |
+| [`tests/wizard.test.mjs`](tests/wizard.test.mjs) | Vm-context | The wizard's `generateListSpec()` exhaustively across all 240 answer combinations. Verifies no duplicates, exactly one quantity-variant per group (key dedup), essential categories always present, infants flying always have a birth certificate, solid-food items only appear at 6mo+, pack-and-play only appears for extended/multi-night stays at someone else's house, and that names always include the possessive descriptor. |
+| [`tests/category.test.mjs`](tests/category.test.mjs) | jsdom integration | Category CRUD against a real DOM. Loads `index.html` + scripts inside jsdom and simulates click + keydown events. Covers: rename mode entered on header click, save-on-enter, cancel-on-escape, empty rename rejected, create new category (with auto-opened add form), delete with confirmation, cancel-delete leaves category, rename mode hides delete button (mutual exclusion), opening "+ New category" closes any open rename, Reset to defaults restores deleted categories. |
 
-**Total: 44 tests, ~100 ms runtime.**
+**Total: 60 tests, ~900 ms runtime.**
+
+### The three test tiers
+
+1. **Pure unit** (`sanitize`, `slug`) — pure functions imported from `lib/`, no DOM, no globals. Fast and trivial to write.
+2. **Vm-context** (`wizard`) — the wizard is a browser script that assigns to `window.WIZARD`. We load it inside `vm.createContext` with a fake window. Good for testing pure logic exposed on globals when you can't `import` the file as ESM.
+3. **jsdom integration** (`category`) — for tests that need real DOM events, focus management, and rendering. Loads the entire app inside jsdom and exercises it like a (very fast) browser. Use sparingly — slower, more dependencies, more setup boilerplate.
 
 ## Architecture
 
@@ -69,13 +79,13 @@ const WIZARD = fakeWindow.WIZARD;
 
 This is good enough for testing pure logic exposed on `window.WIZARD`. **Caveat:** values returned from the vm context have a foreign prototype, so `assert.deepStrictEqual` may refuse to match identical-looking arrays. Workaround: compare via `JSON.stringify` or copy values into the local realm with a loop.
 
-### Why not jsdom / vitest / jest?
+### Why these choices over alternatives?
 
-| Option | Why we said no (for now) |
+| Option | Verdict |
 |---|---|
-| **jsdom** + DOM testing | Most of our DOM code is direct manipulation; testing it would mean re-implementing the browser. The bug surface is mostly in pure logic, which we *do* cover. |
-| **vitest / jest** | Both work great. We chose the Node built-in runner because it's zero-config, zero-dependency, and ships with the Node version we already use for Netlify Functions. If we ever need watch mode or coverage reports, we can switch in 30 minutes. |
-| **Playwright e2e** | Real-browser tests are valuable but heavy. They require CI infrastructure, browser binaries, and slow test runs. Worth it for an app with 50+ flows; overkill for one with five buttons. |
+| **Node built-in test runner** vs vitest / jest | We use the Node built-in. Zero config, zero runtime deps, ships with the Node version we already use for Netlify Functions. If we ever need watch mode or coverage reports, we can switch in 30 minutes. |
+| **jsdom** for DOM tests | We use it (devDep). Lightweight, ~8MB, runs in pure Node, no browser binary download. Used in `tests/category.test.mjs` to test category CRUD against a real DOM. We don't use it for everything — only for tests that genuinely need DOM events and rendering. Pure logic tests still use direct imports. |
+| **Playwright / Puppeteer e2e** | Skipped. Real-browser tests are valuable but heavy. They require CI infrastructure, browser binaries, and slow test runs. Worth it for an app with 50+ flows; overkill for one with a handful. If we ever launch on multiple browsers and need cross-browser confidence, this is the upgrade path. |
 
 ## Adding a new test
 
@@ -119,7 +129,7 @@ Honest list of testing gaps:
 | Gap | Why it's OK for now |
 |---|---|
 | **Storage migration logic in `app.js`** | The migration code lives inside an IIFE and isn't easily importable. Migration is exercised manually whenever a user upgrades. Risk is low because the legacy keys have been stable for one version. |
-| **Render loop in `renderList()`** | DOM-heavy, hard to test without a fake DOM. Bugs here would be visible immediately on local dev. |
+| **Render loop in `renderList()`** for items (check, edit, delete) | Item-level interactions are covered indirectly by the category integration tests via shared rendering paths. Direct unit coverage would need more jsdom tests; not yet worth the effort. |
 | **Service worker behavior** | Caching behavior is tested implicitly by deploying and seeing if the app works offline. Service worker testing tools exist but they're heavy. |
 | **The Netlify Functions integration** | The function code is tested via the extracted `lib/sanitize.mjs` and `lib/slug-words.mjs` (the bulk of the logic). The thin Function wrapper that calls Netlify Blobs is tested manually after deploy. Could add integration tests with a Blobs mock if abuse becomes a concern. |
 | **Browser-specific behavior** (Safari vs Chrome) | Manual test in browsers before each release. Not many browsers, not many flows. |

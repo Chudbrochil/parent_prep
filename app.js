@@ -595,9 +595,15 @@
             danger: true,
           }, function () {
             list.categories.splice(catIdx, 1);
-            // Clear any state that pointed at this index
-            if (addingToCategoryIdx === catIdx) addingToCategoryIdx = null;
-            if (editingItemCoord && editingItemCoord.catIdx === catIdx) editingItemCoord = null;
+            // Splicing shifts higher indices down by one. Rather than
+            // tracking which states need re-indexing vs clearing, just
+            // clear all transient editing state — the rare cost (losing
+            // an in-progress edit on a different category) is worth the
+            // simplicity and consistency.
+            addingToCategoryIdx = null;
+            editingItemCoord = null;
+            editingCategoryIdx = null;
+            addingNewCategory = false;
             save();
             renderList();
           });

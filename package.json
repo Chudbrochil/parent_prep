@@ -10,5 +10,8 @@
   },
   "dependencies": {
     "@netlify/blobs": "^7.0.0"
+  },
+  "devDependencies": {
+    "jsdom": "^29.0.2"
   }
 }
