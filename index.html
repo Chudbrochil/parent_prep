@@ -117,6 +117,10 @@
       <span class="menu-title">Duplicate as my list</span>
       <span class="menu-sub">Make an editable copy you can change freely</span>
     </button>
+    <button id="shareBtn" class="menu-btn">
+      <span class="menu-title">Share this list</span>
+      <span class="menu-sub">Get a friendly link you can text to anyone</span>
+    </button>
     <button id="resetBtn" class="menu-btn">
       <span class="menu-title">Reset to defaults</span>
       <span class="menu-sub">Restore original items, discard changes</span>
@@ -166,6 +170,45 @@
         <button type="submit" class="primary-btn">Save</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- Share modal: shown after generating a share slug -->
+<div id="shareModal" class="modal hidden">
+  <div class="modal-content">
+    <h2>Share this list</h2>
+    <p class="confirm-message">Send this link to anyone — when they open it, they can save the list to their own phone. Links expire after 90 days.</p>
+    <div id="shareCodeBlock" class="share-code-block">
+      <div class="share-code-label">Your share code</div>
+      <div id="shareCodeText" class="share-code-text">—</div>
+      <div id="shareUrlText" class="share-url-text">—</div>
+    </div>
+    <div class="modal-buttons">
+      <button type="button" id="shareCopyBtn" class="secondary-btn">Copy link</button>
+      <button type="button" id="shareNativeBtn" class="primary-btn">Share…</button>
+    </div>
+    <button type="button" id="shareCloseBtn" class="secondary-btn share-close">Close</button>
+  </div>
+</div>
+
+<!-- Share creating spinner / error state -->
+<div id="shareLoadingModal" class="modal hidden">
+  <div class="modal-content share-loading">
+    <div class="share-loading-spinner" aria-hidden="true"></div>
+    <p id="shareLoadingText">Creating your share link…</p>
+  </div>
+</div>
+
+<!-- Import modal: shown when the URL has a ?s=slug parameter -->
+<div id="importModal" class="modal hidden">
+  <div class="modal-content">
+    <h2 id="importTitle">Someone shared a list with you</h2>
+    <p id="importMessage" class="confirm-message">Add it to your lists so you can use it on this device?</p>
+    <div id="importPreview" class="import-preview"></div>
+    <div class="modal-buttons">
+      <button type="button" id="importCancelBtn" class="secondary-btn">Not now</button>
+      <button type="button" id="importConfirmBtn" class="primary-btn">Add to my lists</button>
+    </div>
   </div>
 </div>
 

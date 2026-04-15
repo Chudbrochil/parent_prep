@@ -11,7 +11,7 @@
   // --- Constants -----------------------------------------------------
 
   const APP_NAME = "Packing for Parents";
-  const APP_VERSION = "1.0.0";
+  const APP_VERSION = "1.0.1";
   const STORAGE_KEY = "parentprep.lists";
   const SCHEMA_VERSION = 1;
   const LEGACY_KEYS = ["parentprep.v5", "parentprep.v4", "parentprep.v3", "parentprep.v2", "parentprep.lists.v1"];
@@ -251,10 +251,25 @@
   const listMenuModal = document.getElementById("listMenuModal");
   const uncheckAllBtn = document.getElementById("uncheckAllBtn");
   const duplicateBtn = document.getElementById("duplicateBtn");
+  const shareBtn = document.getElementById("shareBtn");
   const resetBtn = document.getElementById("resetBtn");
   const renameBtn = document.getElementById("renameBtn");
   const deleteBtn = document.getElementById("deleteBtn");
   const closeMenuBtn = document.getElementById("closeMenuBtn");
+  const shareModal = document.getElementById("shareModal");
+  const shareCodeText = document.getElementById("shareCodeText");
+  const shareUrlText = document.getElementById("shareUrlText");
+  const shareCopyBtn = document.getElementById("shareCopyBtn");
+  const shareNativeBtn = document.getElementById("shareNativeBtn");
+  const shareCloseBtn = document.getElementById("shareCloseBtn");
+  const shareLoadingModal = document.getElementById("shareLoadingModal");
+  const shareLoadingText = document.getElementById("shareLoadingText");
+  const importModal = document.getElementById("importModal");
+  const importTitle = document.getElementById("importTitle");
+  const importMessage = document.getElementById("importMessage");
+  const importPreview = document.getElementById("importPreview");
+  const importCancelBtn = document.getElementById("importCancelBtn");
+  const importConfirmBtn = document.getElementById("importConfirmBtn");
   const wizardScreen = document.getElementById("wizardScreen");
   const wizardProgress = document.getElementById("wizardProgress");
   const wizardQuestion = document.getElementById("wizardQuestion");
@@ -1166,6 +1181,221 @@
     });
   }
 
+  // --- Share & import ------------------------------------------------
+
+  let pendingImportList = null;
+
+  if (shareBtn) {
+    shareBtn.addEventListener("click", function () {
+      const list = state.lists[state.activeListId];
+      const meta = getListMeta(state.activeListId);
+      if (!list || !meta) return;
+      listMenuModal.classList.add("hidden");
+      createShareForList(list, meta);
+    });
+  }
+
+  function showShareLoading(text) {
+    if (shareLoadingText) shareLoadingText.textContent = text;
+    shareLoadingModal.classList.remove("hidden");
+  }
+  function hideShareLoading() {
+    shareLoadingModal.classList.add("hidden");
+  }
+
+  function createShareForList(list, meta) {
+    showShareLoading("Creating your share link…");
+    const payload = {
+      list: {
+        name: meta.name,
+        emoji: meta.emoji,
+        description: meta.description,
+        categories: list.categories,
+      },
+    };
+    fetch("/api/share-create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+      .then(function (res) {
+        if (!res.ok) throw new Error("share-create returned " + res.status);
+        return res.json();
+      })
+      .then(function (data) {
+        if (!data || !data.slug) throw new Error("Missing slug in response");
+        hideShareLoading();
+        showShareModal(data.slug);
+      })
+      .catch(function (err) {
+        hideShareLoading();
+        showToast("Couldn't create share link. Try again?");
+      });
+  }
+
+  function showShareModal(slug) {
+    const fullUrl = window.location.origin + "/s/" + slug;
+    shareCodeText.textContent = slug;
+    shareUrlText.textContent = fullUrl;
+    shareModal.classList.remove("hidden");
+  }
+
+  if (shareCopyBtn) {
+    shareCopyBtn.addEventListener("click", function () {
+      const url = shareUrlText.textContent;
+      if (!url || url === "—") return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(function () {
+          showToast("Link copied!");
+        }).catch(function () {
+          showToast("Couldn't copy — try the Share button");
+        });
+      } else {
+        showToast("Copy not supported on this browser");
+      }
+    });
+  }
+
+  if (shareNativeBtn) {
+    shareNativeBtn.addEventListener("click", function () {
+      const url = shareUrlText.textContent;
+      const slug = shareCodeText.textContent;
+      if (!url || url === "—") return;
+      if (navigator.share) {
+        navigator.share({
+          title: "Packing for Parents",
+          text: "I made a packing list — open it with this code: " + slug,
+          url: url,
+        }).catch(function () { /* user cancelled or share unsupported */ });
+      } else {
+        // Fallback: copy to clipboard
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(url).then(function () {
+            showToast("Link copied — paste it anywhere");
+          });
+        }
+      }
+    });
+  }
+
+  if (shareCloseBtn) {
+    shareCloseBtn.addEventListener("click", function () { shareModal.classList.add("hidden"); });
+  }
+  if (shareModal) {
+    shareModal.addEventListener("click", function (e) {
+      if (e.target === shareModal) shareModal.classList.add("hidden");
+    });
+  }
+
+  // --- Import flow ----------------------------------------------------
+
+  function detectAndImportFromUrl() {
+    let slug = null;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      slug = params.get("s");
+    } catch (e) { /* ignore */ }
+    if (!slug) return;
+    if (!/^[a-z]+-[a-z]+-[a-z]+$/.test(slug)) return;
+
+    showShareLoading("Loading shared list…");
+    fetch("/api/share-get?slug=" + encodeURIComponent(slug))
+      .then(function (res) {
+        if (res.status === 404) throw new Error("not-found");
+        if (res.status === 410) throw new Error("expired");
+        if (!res.ok) throw new Error("fetch-failed");
+        return res.json();
+      })
+      .then(function (data) {
+        hideShareLoading();
+        if (!data || !data.list) throw new Error("missing list");
+        showImportModal(data.list, slug);
+      })
+      .catch(function (err) {
+        hideShareLoading();
+        const msg = err && err.message;
+        if (msg === "not-found") {
+          showToast("That share link wasn't found");
+        } else if (msg === "expired") {
+          showToast("That share link has expired");
+        } else {
+          showToast("Couldn't load the shared list");
+        }
+        // Clean the URL either way so it doesn't keep popping
+        cleanShareParamFromUrl();
+      });
+  }
+
+  function showImportModal(list, slug) {
+    pendingImportList = list;
+    const itemCount = (list.categories || []).reduce(function (n, c) {
+      return n + (c.items ? c.items.length : 0);
+    }, 0);
+    importTitle.textContent = "“" + (list.name || "Shared list") + "” was shared with you";
+    importMessage.textContent = "Add it to your lists on this device? Saves locally — nothing leaves your phone after import.";
+    importPreview.innerHTML =
+      '<div class="import-preview-icon">' + escapeHTML(list.emoji || "📋") + '</div>' +
+      '<div class="import-preview-text">' +
+        '<div class="import-preview-name">' + escapeHTML(list.name || "Shared list") + '</div>' +
+        '<div class="import-preview-meta">' + itemCount + ' item' + (itemCount === 1 ? '' : 's') + ' · code <strong>' + escapeHTML(slug) + '</strong></div>' +
+      '</div>';
+    importModal.classList.remove("hidden");
+  }
+
+  function hideImportModal() {
+    importModal.classList.add("hidden");
+    pendingImportList = null;
+  }
+
+  function cleanShareParamFromUrl() {
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("s");
+      // Also reset the path if it was /s/:slug rewritten by Netlify
+      let newPath = url.pathname;
+      if (/^\/s\/[a-z-]+$/.test(newPath)) newPath = "/";
+      const cleanUrl = url.origin + newPath + (url.search || "");
+      history.replaceState(null, "", cleanUrl);
+    } catch (e) { /* ignore */ }
+  }
+
+  if (importCancelBtn) {
+    importCancelBtn.addEventListener("click", function () {
+      hideImportModal();
+      cleanShareParamFromUrl();
+    });
+  }
+  if (importConfirmBtn) {
+    importConfirmBtn.addEventListener("click", function () {
+      if (!pendingImportList) { hideImportModal(); return; }
+      const list = pendingImportList;
+      const id = "custom-" + uid();
+      state.lists[id] = {
+        isCustom: true,
+        name: clampText(list.name, MAX_LIST_NAME_LENGTH) || "Shared list",
+        emoji: list.emoji || "📋",
+        description: list.description || "Shared with you",
+        categories: list.categories.map(function (c) {
+          return {
+            name: c.name,
+            items: c.items.map(function (it) {
+              return { text: it.text, checked: false };  // start fresh, unchecked
+            }),
+          };
+        }),
+      };
+      save();
+      hideImportModal();
+      cleanShareParamFromUrl();
+      showList(id);
+    });
+  }
+  if (importModal) {
+    importModal.addEventListener("click", function (e) {
+      if (e.target === importModal) { hideImportModal(); cleanShareParamFromUrl(); }
+    });
+  }
+
   // --- Error boundary ------------------------------------------------
 
   function showCrashBoundary(err) {
@@ -1221,6 +1451,7 @@
     load();
     showHome();
     maybeShowIOSBanner();
+    detectAndImportFromUrl();
   } catch (err) {
     showCrashBoundary(err);
   }

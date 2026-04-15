@@ -1,0 +1,31 @@
+# Netlify configuration for Packing for Parents.
+#
+# This file controls how Netlify builds, serves, and routes the site.
+# Functions live in netlify/functions/ and are exposed under /api/* via
+# the rewrites below. Pretty share URLs (/s/:slug) are also rewritten
+# to index.html so the SPA can pick up the slug from the query string.
+
+[build]
+  publish = "."
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# Pretty share URLs: /s/sunny-elmo-park
+# Rewrites to index.html?s=sunny-elmo-park (URL stays pretty for the user)
+[[redirects]]
+  from = "/s/:slug"
+  to = "/index.html?s=:slug"
+  status = 200
+
+# API routes for the share Functions
+[[redirects]]
+  from = "/api/share-create"
+  to = "/.netlify/functions/share-create"
+  status = 200
+
+[[redirects]]
+  from = "/api/share-get"
+  to = "/.netlify/functions/share-get"
+  status = 200

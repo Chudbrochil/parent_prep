@@ -944,6 +944,126 @@ main {
   margin: 0 0 8px 0;
 }
 
+/* ======================== SHARE MODAL ======================== */
+
+.share-code-block {
+  margin: 18px 0 8px 0;
+  padding: 18px 16px;
+  background: var(--accent-softer);
+  border: 1.5px solid var(--accent-light);
+  border-radius: 14px;
+  text-align: center;
+}
+
+.share-code-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent-dark);
+  margin-bottom: 8px;
+}
+
+.share-code-text {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--accent-dark);
+  letter-spacing: -0.01em;
+  word-break: break-all;
+  line-height: 1.2;
+  margin-bottom: 8px;
+  font-family: 'Manrope', sans-serif;
+}
+
+.share-url-text {
+  font-size: 12px;
+  color: var(--ink-soft);
+  word-break: break-all;
+  line-height: 1.4;
+  font-family: ui-monospace, "SF Mono", Monaco, Menlo, monospace;
+}
+
+.share-close {
+  width: 100%;
+  margin-top: 10px;
+}
+
+/* Spinner for share-creating state */
+.share-loading {
+  text-align: center;
+  padding: 36px 24px;
+}
+
+.share-loading-spinner {
+  width: 36px;
+  height: 36px;
+  margin: 0 auto 16px auto;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.share-loading p {
+  font-size: 15px;
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+/* ======================== IMPORT PREVIEW ======================== */
+
+.import-preview {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  margin: 14px 0 4px 0;
+  background: var(--accent-softer);
+  border: 1.5px solid var(--accent-light);
+  border-radius: 14px;
+}
+
+.import-preview-icon {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  background: var(--card);
+  border-radius: 12px;
+}
+
+.import-preview-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.import-preview-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.import-preview-meta {
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.import-preview-meta strong {
+  color: var(--accent-dark);
+  font-weight: 700;
+}
+
 /* ======================== WIZARD (full-screen) ======================== */
 
 .wizard-screen {

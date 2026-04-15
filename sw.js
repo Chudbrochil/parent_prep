@@ -1,5 +1,5 @@
 // Packing for Parents — service worker, minimal offline cache.
-const CACHE = "parentprep-v16";
+const CACHE = "parentprep-v17";
 const FILES = [
   "./",
   "./index.html",
@@ -30,6 +30,15 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
+
+  // Don't cache API calls or share-import URLs — these need fresh
+  // responses from Netlify Functions every time.
+  let url;
+  try { url = new URL(event.request.url); } catch (e) { return; }
+  if (url.pathname.startsWith("/api/")) return;
+  if (url.pathname.startsWith("/s/")) return;
+  if (url.pathname.startsWith("/.netlify/")) return;
+
   event.respondWith(
     caches.match(event.request).then((cached) => {
       return (
